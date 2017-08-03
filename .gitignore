@@ -1,4 +1,10 @@
+/**/.DS_Store
+/**/target
+/**/bin
+/**/.jsdtscope
+
 # Logs
+
 logs
 *.log
 npm-debug.log*
