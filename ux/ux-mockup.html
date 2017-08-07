@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Insert title here</title>
+    <script type="text/javascript" src="lazy.js"></script>
+    <!-- optional: if you want support for DOM event and AJAX-based sequences: -->
+    <script type="text/javascript" src="lazy.browser.js"></script>
+    <script type="text/javascript" src="jquery-3.2.1.js"></script>
+    <script type="text/javascript" src="code.js"></script>
+    <script type="text/javascript">
+    window.onload = initfunct
+    var _ = Lazy
+    var aryres = _.generate(Math.random)
+        .map(function(e) { return Math.floor(e * 1000) + 1; })
+        .uniq()
+        .take(10)
+    //.each(function(e) { console.log(e); })
+    ;
+
+    $(function() {
+        $('#numbershere').get(0)
+            .innerHTML = aryres.join(' , ')
+    })
+    </script>
+    <style>
+    ul {
+        list-style: block;
+        padding: 0;
+        margin: 0;
+        background: #1bc2a2;
+    }
+
+    ul li {
+        display: block;
+        position: relative;
+        float: left;
+        background: #1bc2a2;
+    }
+
+    li ul {
+        display: none;
+    }
+
+    ul li a {
+        display: block;
+        padding: 1em;
+        text-decoration: none;
+        white-space: nowrap;
+        color: #fff;
+    }
+
+    ul li a:hover {
+        background: #2c3e50;
+    }
+
+    li:hover>ul {
+        display: block;
+        position: absolute;
+    }
+
+    li:hover li {
+        float: none;
+    }
+
+    li:hover a {
+        background: #1bc2a2;
+    }
+
+    li:hover li a:hover {
+        background: #2c3e50;
+    }
+
+    .main-navigation li ul li {
+        border-top: 0;
+    }
+
+    ul ul ul {
+        left: 100%;
+        top: 0;
+    }
+
+    ul:before,
+    ul:after {
+        content: " ";
+        /* 1 */
+        display: table;
+        /* 2 */
+    }
+
+    ul:after {
+        clear: both;
+    }
+    </style>
+</head>
+
+<body>
+    hello world hi xx
+    <div id="texthere"></div>
+    <div id="numbershere"></div>
+    <div>
+        here is list
+    </div>
+    <div>
+        here is list 2
+    </div>
+    <div id="listitem">
+        here is list 3
+        <span>
+<ul class="main-navigation" style="display:inline-block;">
+ <li><a href="#">Home</a></li>
+ <li><a href="#">Front End Design</a>
+   <ul>
+     <li><a href="#">HTML</a></li>
+     <li><a href="#">CSS</a>
+       <ul>
+         <li><a href="#">Resets <div>div</div> <span>span</span> <span>span</span> </a>
+        </li>
+        <li><a href="#">Grids</a></li>
+        <li><a href="#">Frameworks</a></li>
+        </ul>
+        </li>
+        <li><a href="#">JavaScript</a>
+            <ul>
+                <li><a href="#">Ajax</a></li>
+                <li><a href="#">jQuery</a></li>
+            </ul>
+        </li>
+        </ul>
+        </li>
+        <li><a href="#">WordPress Development</a>
+            <ul>
+                <li><a href="#">Themes</a></li>
+                <li><a href="#">Plugins</a></li>
+                <li><a href="#">Custom Post Types</a>
+                    <ul>
+                        <li><a href="#">Portfolios</a></li>
+                        <li><a href="#">Testimonials</a></li>
+                    </ul>
+                </li>
+                <li><a href="#">Options</a></li>
+            </ul>
+        </li>
+        <li><a href="#">About Us</a></li>
+        </ul>
+        </span>
+    </div>
+</body>
+
+</html>
