@@ -8,7 +8,9 @@
     <!-- optional: if you want support for DOM event and AJAX-based sequences: -->
     <script type="text/javascript" src="lazy.browser.js"></script>
     <script type="text/javascript" src="jquery-3.2.1.js"></script>
+    <script type="text/javascript" src="moment-with-locales.js"></script>
     <script type="text/javascript" src="code.js"></script>
+    <script type="text/javascript" src="scheduler-ux.js"></script>
     <script type="text/javascript">
     window.onload = initfunct
     var _ = Lazy
@@ -93,6 +95,8 @@
         clear: both;
     }
     </style>
+
+
 </head>
 
 <body>
@@ -146,6 +150,245 @@
         </ul>
         </span>
     </div>
+
+
+
+<script type="text/javascript">
+$(document).ready(function(){
+  fnAdjustTable();
+});
+
+fnAdjustTable = function(){
+
+  var colCount = $('#firstTr>td').length; //get total number of column
+
+  var m = 0;
+  var n = 0;
+  var brow = 'chrome';
+  
+  jQuery.each(jQuery.browser, function(i, val) {
+    if(val === true){
+      brow = i.toString();
+    }
+  });
+  
+  $('.tableHeader').each(function(i){
+
+    // for each col, find max col width, set header and tds width 
+    $('#tableFirstCol').css("width",Math.max.apply(Math, $('.tableFirstCol').map(()=> { return $(this).width()})))
+    $('#tableFirstCol').css("width",Math.max.apply(Math, $('.tableFirstCol').map(()=> { return $(this).width()})))
+
+    $('.tableFirstCol').each(i=>{ $(this).width() })
+    $('td').map(()=> { $(this).height();}).get();
+
+    //var maxHeight = Math.max.apply(Math, heights);
+    $('#firstTd').css("width",$('.tableFirstCol').width());
+    if (m < colCount){
+      // make right header group same with as their columns     
+        $(this).css('width',$('#table_div td:eq('+m+')').innerWidth());
+
+    }
+    m++;
+  });
+
+  // find max td height in row, set all td height in row
+
+  // make table data rows same height - in both sections left is adjusted to right
+  $('.tableFirstCol').each(function(i){
+       $(this).css('height',$('#table_div td:eq('+colCount*n+')').height());
+    n++;
+  });
+
+};
+
+//function to support scrolling of title and first column
+fnScroll = function(){
+    // scroll right header with right data change - horizontal
+  $('#divHeader').scrollLeft($('#table_div').scrollLeft());
+  // scroll left data with right data - vertical
+  $('#firstcol').scrollTop($('#table_div').scrollTop());
+};
+
+// scroll right data vertically with left data 
+fnScroll1 = function(){
+  $('#table_div').scrollTop($('#firstcol').scrollTop());
+};
+
+// size table div width to window size that is leftover
+// size table div and left data height to left over 
+// add footers section: that is twin of left and right header
+// left-fix-width,right-scroll-leftover-with,
+// header,footer-fix-height
+// data
+// sizing takes place after ?? load,resize window
+// how to size height of rows (data and headers, footers)? right is set to left-height
+// how to size width of columns (data and headers, footers)?? get largest in each column first
+
+</script>
+<table cellspacing="0" cellpadding="0" border="0" >
+  <tr>
+    <td id="firstTd"> header
+    </td>
+    <td>
+      <div id="divHeader" style="overflow:hidden;width:200px;">
+        <table cellspacing="0" cellpadding="0" border="1" >
+          <tr>
+            <td>
+              <div class="tableHeader">Title1ssssSSS</div>
+            </td>
+            <td>
+              <div class="tableHeader">Title2ss</div>
+            </td>
+            <td>
+              <div class="tableHeader">Title3ssssSSSSS</div>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </td>
+  </tr>
+  <tr>
+  
+    <td valign="top">
+      <div id="firstcol" style="overflow: scroll;height:80px" onscroll="fnScroll1()">
+        <table width="200px" cellspacing="0" cellpadding="0" border="1" >
+          <tr>
+            <td class="tableFirstCol">First Col row1 </td>
+          </tr>
+          <tr>
+            <td class="tableFirstCol">First Col row2</td>
+          </tr>
+          <tr>
+            <td class="tableFirstCol">First Col row3</td>
+          </tr>
+          <tr>
+            <td class="tableFirstCol">First Col row4</td>
+          </tr>
+          <tr>
+            <td class="tableFirstCol">First Col row5</td>
+          </tr>
+          <tr>
+            <td class="tableFirstCol">First Col row6</td>
+          </tr>
+          <tr>
+            <td class="tableFirstCol">First Col row7</td>
+          </tr>
+          <tr>
+            <td class="tableFirstCol">First Col row8</td>
+          </tr>
+          <tr>
+            <td class="tableFirstCol">First Col row9</td>
+          </tr>
+        </table>
+      </div>
+    </td>
+    
+    <td valign="top">
+      <div id="table_div" style="overflow: scroll;width:300px;height:100px;position:relative" onscroll="fnScroll()" >
+        <table width="500px" cellspacing="0" cellpadding="0" border="1" >
+          <tr id='firstTr'>
+            <td>Row1Col1</td>
+            <td>Row1Col2</td>
+            <td>Row1Col3</td>
+            <td>Row1Col4</td>
+            <td>Row1Col5</td>
+          </tr>
+          <tr>
+            <td>Row2Col1</td>
+            <td>Row2Col2</td>
+            <td>Row2Col3</td>
+            <td>Row2Col4</td>
+            <td>Row3Col5</td>
+          </tr>
+          <tr>
+            <td>Row3Col1</td>
+            <td>Row3Col2</td>
+            <td>Row3Col3</td>
+            <td>Row3Col4</td>
+            <td>Row3Col5</td>
+          </tr>
+          <tr>
+            <td>Row4Col1</td>
+            <td>Row4Col2</td>
+            <td>Row4Col3</td>
+            <td>Row4Col4</td>
+            <td>Row4Col5</td>
+          </tr>
+          <tr>
+            <td>Row5Col1</td>
+            <td>Row5Col2</td>
+            <td>Row5Col3</td>
+            <td>Row5Col4</td>
+            <td>Row5Col5</td>
+          </tr>
+          <tr>
+            <td>Row6Col1</td>
+            <td>Row6Col2</td>
+            <td>Row6Col3 is both wider and<br />taller than surrounding cells, yet<br />fixed elements still line up correctly</td>
+            <td>Row6Col4</td>
+            <td>Row6Col5</td>
+          </tr>
+          <tr>
+            <td>Row7Col1</td>
+            <td>Row7Col2</td>
+            <td>Row7Col3</td>
+            <td>Row7Col4</td>
+            <td>Row7Col5</td>
+          </tr>
+          <tr>
+            <td>Row8Col1</td>
+            <td>Row8Col2</td>
+            <td>Row8Col3</td>
+            <td>Row8Col4</td>
+            <td>Row8Col5</td>
+          </tr>
+          <tr>
+            <td>Row9Col1</td>
+            <td>Row9Col2</td>
+            <td>Row9Col3</td>
+            <td>Row9Col4</td>
+            <td>Row9Col5</td>
+          </tr>
+        </table>
+      </div>
+    </td>
+  </tr>
+</table>
+
+<script>
+// testfunc()
+// console.log("moment call ", moment().endOf('day').fromNow())
+// moment.locale('de-ch')
+// console.log("moment call ", moment().locale())
+// console.log("moment call ", moment().format('MMMM Do YYYY, k:mm:ss a'))
+
+// moment.locale('fr');
+// var m = moment(1316116057189);
+// console.log("moment call ",m.fromNow()); // il y a une heure
+
+// moment.locale('de-ch');
+// m.fromNow(); // il y a une heure
+// console.log("moment call ",moment(1316116057189).fromNow()); // an hour ago
+
+    console.log("loading ux html")
+$(()=> {
+    console.log("loading tasktable ")
+    puttasks(tasks, $('#tasktable'))
+})
+
+</script>
+<style>
+    .tasktable td,  .tasktable th {
+        border:1px solid black;
+    }
+</style>
+
+  <div id="tasktable"> hi 
+
+  </div>
+
+
+
 </body>
 
 </html>
