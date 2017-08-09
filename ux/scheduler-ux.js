@@ -10,9 +10,30 @@ let testfunc = ()  =>  {console.log("test funct!!!")}
 // tasks []
 //    id:number, name:string, due-date:date, start-date:date, duration:minutes, prio:[number], location:[string], target:[string], requirements:[number], dependencies : [number]
 
+var events = [
+	{id:1000, name:"wakeup", repeat:"daily", start:moment().startOf('day').add(7, 'h')}
+]
+
 var tasks = [
-	{id:1, name:"write emails", dueDate:moment().endOf('week'), startDate:moment().add(1, 'd'), duration:moment.duration(30, 'minutes'), prio:[1], location:["home"], target:["domestic"], requirements:[], dependencies : []}
-	,{id:2, name:"mail application", dueDate:moment().endOf('day').add(-6, 'hours'), startDate:moment().add(1, 'h'), duration:moment.duration(15, 'minutes'), prio:[1], location:["home"], target:["domestic"], requirements:[], dependencies : []}
+	{id:1, name:"write emails", dueDate:moment().endOf('week'), start:moment().add(1, 'd'), duration:moment.duration(30, 'minutes'), prio:[1], location:["home"], target:["domestic"], requirements:[2], dependencies : [], minchunck:moment.duration(15, 'minutes')}
+	,{id:2, name:"mail application", dueDate:moment().endOf('day').add(-6, 'hours'), start:moment().add(1, 'h'), duration:moment.duration(15, 'minutes'), prio:[1], location:["home"], target:["domestic"], requirements:[], dependencies : [1],}
+	,{id:3, name:"breakfast", start:moment().startOf('day').add(7, 'h'), duration:moment.duration(30, 'minutes'), prio:[1], location:["home"], target:["domestic"], requirements:[], dependencies : [1000], repeat:"daily"}
+]
+
+var taskScheduleStatus = [
+	{taskid: 1, status:"red", schedule:[{start:moment(), chucks:2}]}
+]
+
+var schedule =[
+	{
+	 day:moment(), 
+	 tasks : [
+		{ taskid:1, start:moment().add(1, 'h')}
+		,{taskid:2, start:moment().add(2, 'h'), chunks:2 }
+		,{taskid:3, start:moment().add(3, 'h')  }
+		,{taskid:1000, start:moment().add(3, 'h')  }
+		]
+	}
 ]
 
 function puttasks(tasks, $elem) {
