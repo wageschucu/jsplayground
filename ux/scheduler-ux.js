@@ -10,6 +10,8 @@ let testfunc = ()  =>  {console.log("test funct!!!")}
 // tasks []
 //    id:number, name:string, due-date:date, start-date:date, duration:minutes, prio:[number], location:[string], target:[string], requirements:[number], dependencies : [number]
 
+// relations graph: family tree, organigrams, smedia, emails, contacts, bank-accts, 
+
 var events = [
 	{id:1000, name:"wakeup", repeat:"daily", start:moment().startOf('day').add(7, 'h')}
 ]

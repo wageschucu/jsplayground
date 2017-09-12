@@ -1,0 +1,397 @@
+flows
+	acct
+	due schedule
+	calendar
+
+tasks
+	events,routines,meetings,tasks,empleyments(work,domesitc,clubs,gardening), personalpref(relaxation,health/exercise,social,gardening)
+
+	schedule 
+		sort 
+		task 
+			prio
+			goal
+			deps
+			personalpref
+			geo
+
+		allocate resources, calendar
+			geo
+			time:manhours:repeating type stuff
+			goal
+			personalpref
+
+function extend(source, extension, target) {
+	if (!target)
+		target={}
+	
+	return clone(clone(target, source ), extension)
+}
+function clone(destination, source) {
+    for (var property in source) {
+        if (typeof source[property] === "object" && source[property] !== null && destination[property]) { 
+            clone(destination[property], source[property]);
+        } else {
+            destination[property] = source[property];
+        }
+    }
+}
+
+let const itemPrototype {
+	startTime : null
+	,dueTime : null
+	,minChuck : 5
+	,geo:"home"
+	,goal:"work"
+	,deps:[]
+	,prio:5
+	,duration: 15
+
+}
+let const itemDefaults {
+	minChuck : 5
+}
+// how to combine: geo and work
+// work tasks: constraints
+// !!! overlay current constraints on current tasks
+// alloc resource <= tasks,constraints => schedule
+
+let items {
+	geo : ["work", "home", "train"]
+	goal : {
+		work: {		
+			hoduflu : {
+				cr180: {
+					dueTime : "1.1.2018"
+					,duration: 16*60
+				}
+			} 
+		}
+		,domestic: {
+			callUniSptial : {
+				dueTime : "1.1.2018"
+				,duration: 5
+				,geo: ["-work"]
+			}
+			,gemuesekorb : {
+				dueTime : "F"
+				,startTime : "Th:12h"
+				,duration: 5
+				,geo: ["birsmattehof"]
+			}
+			transportOlivia : {
+				geo : ["birsmattehof"]
+				,start: "ThF:12h","F:8h"
+				,prio:5
+			}	
+		}
+		,health: {
+			jogging : {
+				dueTime : "d"
+				,duration: 5-30
+				,mode:"foot"
+			}
+			,bike : {
+				dueTime : "d"
+				,duration: 15-30
+				mode:"bike"
+			}
+			,stretching : {
+				,successor:"sleep"
+				,duration: 15-30
+				,geo:["-train"]
+			}
+			,sleep : {
+				start:"22h"
+				,duration:"8h"
+			}
+			,morningRoutime : {
+				,predessor:"sleep"
+				,tea : {
+					,duration: 15m
+				}
+				,exercise : {
+					,duration: 15m-30m
+				}
+				,jog : {
+					,duration: 15m
+				}
+				,shower : {
+					,duration: 15m
+				}
+				,breakfast : {
+					,duration: 15m
+				}
+			}
+		}
+	}		
+}
+
+// geo, goal, pref, start,end, duration, repeat, mode
+// constraints: preferences: 
+// goals: health,work,domestic,relaxation,novelty 
+// geo:home,work
+// pref/sub goal?? 
+// mode:bike,öv,foot,car
+
+************************
+// goal, other aspects, geo, mode
+//  item can bring a constraint with it
+//  item can have implicite tasks and constraints: 
+//    eg geo path,displacement travel
+//        physical, mental: fitness: 
+//        weather 
+//    leadtime,prereq: travel time, mode, relax, slowdown before bed 
+//      a seat to work: train, office, home: bike, car not
+//       internet access, electricity
+
+//    alpha: mental work, beta: social, phyiscal
+
+work : +alpha, +seat, +internet
+sleep : +beta leadtime, +wakeup followup
+geo: itpearls,home,birsmattehof,heuwaage,sbb,bernbhf,megacoop: current geo : calc ahead travel matix between all per mode: shortest path search
+
+function getTransportItem(geo1,geo2, constraints)
+// how to handle leadtime beta before sleep: leadtime beta is a constraint generated from another constraint
+// how to handle breaks: alpha, beta cycles
+
+let constraints = {
+	weekdays : {
+		goal:"work","domestic","health"
+		,bern : {
+				geo : ["bern"]
+				,start: "MTW:11h-18h"
+		}	
+		,commute : {
+				,start: "MTW:9h-11h","MTW:18h-20h"
+				,mode:"train"
+		}
+		,homeoffice : {
+			geo : ["home"]
+			,start: "ThF:9h-1145h","ThF:13h30-17h" 
+		}
+	}
+}
+
+function flattenItems(items, itemDefaults, itemPrototype) {
+	let itemsArray=[]
+	// iterate over props, decend non-protos, extend, 
+	// if task copy out, into array 
+	// 
+	return itemsArray;
+}
+function dechunkItems(itemsArray) {
+	// sub objects or path as item id? chunkid? whatever works best for allocation/negociation
+	let dechunkedItemsArray=[]
+	// for each divide duration by min chunk size
+	//   multi item by this, append
+	return 	dechunkedItemsArray
+} 
+
+function allocateDechunkedItems(currentResources) {
+	// negociate match
+	//   get largest homogeneous calendar piece
+	//    search for first match in items and allocate, else dont alloc
+	//    next calandar bit, until task list empty
+
+	
+	}
+
+function  getResource(starttime) {
+	let resource={} // start,end,geo,goal,perf
+	// gen next homogeous block
+	//   calc min chunck pieces from starttime until something changes
+
+	return resource;
+}
+	//   1) get min calendar resource for current time
+	//   if first item fits, allocate
+	//   else get calendar item with filter
+	//   if no fit, get next chunkedItem (not current item master of chunk)
+	//      repeat until chunkedItem list finished, in that case advance time by ?? and goto get min/loop 1)
+
+	// move to new calendar
+	// advance time
+	// call again until chunkedItemsArray empty
+}
+
+function prettyPrintCalendar(currentChunkedCalendar) {
+	// stringify, pretty
+	let json = JSON.stringify(currentDechunkedCalendar, null, 2)
+	// log	
+	console.log(json)
+}
+function sortItems(chunkedItemsArray) {
+	sortedChunkedItemsArray
+}
+
+function genResources(){}
+function filterItems(){}
+
+
+let dechunkedItemsArray = chunkItems(flattenItems(items, itemDefaults, itemPrototype))
+
+let currentChunkedCalendar = allocateChunkedItems({calendar:calendar, dechunkedItemsArray:dechunkedItemsArray, currentTime: currentTime} )
+
+let currentChunkedCalendar = chunkCalendar( currentDechunkedCalendar )
+
+prettyPrintCalendar(currentChunkedCalendar) 
+
+
+-------------------
+FLOWS:
+// id => path to contract: contracts.household.swisscom, contracts.household.miete
+const contractProto = {
+	start:date, duration:"",end,:date amount:1.0, acct:"", rythm:"", flows : [], unit: "chf"
+}
+const accounts = {
+	post : {
+		unit:"chf" 
+		,zahlungs : { }
+		,usd : { unit:"usd" }
+		,eur : { unit:"eur" }
+		,spar : { }
+		,3a : { }
+	}
+	,tnb : {
+		unit:"usd" 
+		,checking: {}
+		,savings: {}
+	}
+}
+
+const units = {
+	chf: {eur:1.1, usd:1.0}
+	eur: {chf:1/1.1, usd:1/1.1}
+	usd: {eur:1.1, chf:1.0}
+}
+
+const contracts = {
+	acct: "zahlungs"
+	,unit: "chf"
+	,rythm: "m"
+	,household: {
+		swisscom:
+		{
+			start: "20170104", amount:184
+		}
+		,miete:
+		{
+			start: "20170104", amount:1700
+		}
+		,ebm:
+		{
+			start: "20170104", amount:160, rythm:"q"
+		}
+		,hausrate:
+		{
+			start: "20170104", amount:200, rythm:"a"
+		}
+	}
+	,auto: {
+		gas:
+		{
+			start: "20170104", amount:184
+		}
+		,insurance:
+		{
+			start: "20170104", amount:1700
+		}
+		,tires:
+		{
+			rotation:
+			{
+				start: "20170104", amount:50, rythm:"s"
+			}
+			,replacements:
+			{
+				start: "20170104", amount:800, rythm:"a4"
+			}
+		}
+		,oil:
+		{
+			start: "20170104", amount:100, rythm:"a"
+		}
+		,mfk:
+		{
+			start: "20170104", amount:500, rythm:"a4"
+		}
+		,service:
+		{
+			start: "20170104", amount:200, rythm:"a2"
+		}
+	}
+	,income : {
+		,itp: {
+			monthly:
+			{
+				start: "201701end", amount:-1000
+				,month13:
+				{
+					start: "201712end", rythm: "a"
+				}
+			}
+		}
+		,farm: {
+			start: "201703end", amount:-1000, rythm: "q", acct: "checking"
+		}
+		,tnb: {
+			start: "201703end", amount:-4000, rythm: "q", acct: "checking"
+		}
+	}
+	,post : {
+		spar : {
+				start: "201703end", amount:1000, rythm: "m", acct: "zahlungs"	
+		}
+		,3a : {
+				start: "201712", amount:6000, rythm: "a", acct: "spar"	
+		}
+	}
+}
+
+const actuals = {
+	contract : { date: day,  flow:-1.0, ?bal:1.0 }
+	post1: {
+		date
+		,balance
+		,?flow:-1.0
+	}
+}
+
+function 
+
+   	function genFlows(start,end,contracts,accounts, units, contractProto) => { "20170208": {  unit:"chf", flow:-1.0, balance:1.0 } }
+   	{
+   		// each day until end date
+   		// 	walk contracts recursively gather flows for current day: => merge per day: contract 1 and 2: add all same days together (respect currency conversion)
+   	}
+
+   	chunkFlows(flows, start, rythm) => chunkedFlows {"20170208-20170308-m" : {...} }
+   	actualizeFlows(chunkedFlows, actuals) => actualizedChunkedFlows => { "20170208-20170308-m": { chpost-zahlungs: { unit:"chf", actual: {flow:-1.0, balance:1.0 }, flow:-1.0, balance:1.0 } }  }
+
+   	? what is balance on date? per acct? <= flows, date
+   	? list days where balance below give x: date,duration, per acct? <=flows, x, date, duration
+
+   what is due today? 
+   		item: name, rhythm, start/duration/end(2 of 3), amount, account : autogen: flows:date/amount
+   		duration:xd, xw, xm, xy,xq => days: date+duration(days,weeks, (months, years, quarters: special calc)
+
+   		rhythm d,w,m,q,a,o,MTWThFSSu, wM, m2, mM2 
+   		<= give day: 9.9.2017 => amount
+   			calc begin end, rythm: is date within begin and end? is date in dates: 
+   			calc: date+rhythm=>next date: rythym
+
+   	difficult functions: memento we trust!!
+   		date+rythm => date (d,w,m,q,a,o,MTWThFSSu, wM, m2, mM2 )
+   		start date+duration => end date (xd, xw, xm, xy,xq)
+   		start, amount-total, rythm => end date
+
+   	account saldi:
+   	units:
+   	unitConversions:permutations
+
+   	contracts:
+   		flows:
+   	getNetBalance(contracts, date, accts) => { balance:1.0, flow:1.0, accts:{}, unit:"chf" }
+   	getBalance(net, date, accts)
+
