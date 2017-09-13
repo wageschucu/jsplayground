@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Flows2</title>
+<!--     <script type="text/javascript" src="lazy.js"></script>
+ -->    <!-- optional: if you want support for DOM event and AJAX-based sequences: -->
+<!--     <script type="text/javascript" src="lazy.browser.js"></script>
+ -->    <script type="text/javascript" src="moment-with-locales.js"></script>
+ <script type="text/javascript" src="lodash.js"></script>
+    <script type="text/javascript" src="flows2.js"></script>
+    <script type="text/javascript">
+
+
+let start =  moment('20170104' , 'YYYYMMDD' )
+let end = moment('20171231' , 'YYYYMMDD' )
+
+function getMergedFlows(start,end,contracts,accounts, units, contractProto) 
+{ 
+    let days=genDays(start,end)
+    let normalisedContracts = normaliseContracts(contracts, days, accounts, units, contractProto)
+    // => { "20170208": {  unit:"chf", flow:-1.0, balance:1.0 } }
+    // each day until end date
+    //  walk contracts recursively gather flows for current day: => merge per day: contract 1 and 2: add all same days together (respect currency conversion)
+    // __.mapKeys(days, (value, day) => {
+    //     return getMergedFlow(day, normalisedContracts,accounts, units, contractProto); 
+    // })
+
+}
+function genDays(start, end) {
+    let array=Array.apply(0, Array(Math.round(moment.duration(end.diff(start)).asDays()) ))
+    return array.reduce((object, item, index)=>{  day=moment(start).add(index,'days'); object[day.format('YYYYMMDD')]={}; return object}, {})
+}
+function normaliseContracts(contracts, days, accounts, units, contractProto) {
+    // go down if contract and in account generate flows
+    let normalisedContracts = __.mapKeys(contracts, (value, prop) => {
+        if (typeof prop === "object" && !contractProto[prop]) {
+            let subContract = contracts[prop]
+            subContract = extend({}, subContract, filter(contracts, contractProto))
+            subContract.flows = genFlows(subContract, days, accounts)
+            return normaliseContracts(day, subContract,accounts, units, contractProto)
+        }
+    })
+    normalisedContracts = extend(normalisedContracts, filter(contracts, contractProto))
+    normalisedContracts.flows = genFlows(normalisedContracts, days, accounts, units)
+    return normalisedContracts; 
+}
+
+function genFlows(normalisedContract, days, accounts, units) {
+    let flows = []
+    if (accounts && units && _.keys(accounts).indexOf(normalisedContract.acct)==-1 )
+        return flows;
+
+    // gen seq
+    let sequence = getFlowSeq(normalisedContract, days)
+    return _.reduce(sequence, (flows, item, index)=>{ 
+        let targetUnit;
+        if (accounts)
+            targetUnit = _.keys(targetUnit).head()
+        let flow = {}
+        flow.flow = flow: normalisedContract.amount
+        flow.unit = flow: normalisedContract.unit
+        flows[item] = flow;
+        if (targetUnit)
+            convert(flow.flow, flow.unit, units, targetUnit) 
+
+        ; return flows; 
+    },{})
+}
+function getFlowSeq(normalisedContract, days) {
+    let flows = {}
+    let first = _.keys(days).head()
+    let last = _.findLastKey(days).last()
+    let current = normalisedContract.start
+    while (current <= last) {
+        if (current >= first)
+            flows[current] = {}
+        current = moment(current, 'YYYYMMDD').add(1, normalisedContract.rythm).format('YYYYMMDD')
+    }
+
+}
+function extend(source, extension, target) {
+    if (!target)
+        target={}
+    
+    return clone(clone(target, source ), extension)
+}
+function clone(destination, source) {
+    for (var property in source) {
+        if (typeof source[property] === "object" && source[property] !== null && destination[property]) { 
+            clone(destination[property], source[property]);
+        } else {
+            destination[property] = source[property];
+        }
+    }
+}
+function filter(source, objectProto) {
+    let destination={}
+    for (var property in source) {
+        if (objectProto[property] ) { 
+            destination[property] = source[property];
+        }
+    }
+    return destination
+
+}
+
+let testContract = {
+    acct: "zahlungs",
+    unit: "chf",
+    rythm: "m",
+    start: "20170104", 
+    amount:184,
+}
+
+function convert(value, unit, units, targetUnit) {
+    if (unit!=targetUnit)
+    {
+        let factor = getConversionFactor(unit, units, targetUnit)
+        value = value * factor 
+    }
+    return value;
+}
+
+getMergedFlows(start,end,testContract,accounts, units, contractProto)
+
+function getMergedFlow(day, contracts,units, contractProto) {
+    let subContracts = __.mapKeys(contracts, (value, prop) => {
+        if (typeof prop === "object" ) {
+            let subContract = contracts[prop]
+            return getMergedFlow(day, subContract,units, contractProto)
+        }
+    })
+
+    let topLevelFlow = getFlow(day, contracts, units)
+    let flow = mergeContractsFlows(day, subContracts, topLevelFlow, accounts, units)
+    return flow;
+}
+
+function mergeContractsFlows(day, contracts, topLevelFlow, accounts, units) {
+  
+    let flow = __.reduce(contracts, (flow, contract) => {
+        let newFlow=getFlow(day, contract, units)
+        mergeFlow(newFlow, flow, units)
+    }, topLevelFlow)
+    return flow;
+}
+function getConversionFactor(unit, units, targetUnit) {
+    if (units[unit][targetUnit])
+        return units[unit][targetUnit]
+    else
+        throw new Error("no conversion for : "+unit+" to "+targetUnit)
+}
+function mergeNumber(newFlow, flow, prop, units, unit) {
+    let newValue = 0.0
+    let wasSet=false
+    if (newFlow[prop]) {
+        newValue += convert(newFlow[prop], newFlow.unit, units, unit)
+        wasSet= true
+    }
+    if (flow[prop]) {
+        flow += convert(flow[prop], flow.unit, units, unit)
+        wasSet= true
+    }
+
+    return wasSet?newValue:undefined;
+}
+
+function mergeFlow(newFlow, flow, units) {
+    let mergedFlow = { }
+    mergedFlow.unit = flow.unit || newFlow.unit
+    mergedFlow.balance = mergeNumber(newFlow, flow, "balance", units, mergedFlow.unit )
+    mergedFlow.balance = mergeNumber(newFlow, flow, "flow", units, mergedFlow.unit )
+    return mergedFlow
+}
+function getFlow(day, contract, accounts, units) {
+    // normalised contract
+    let flow = {}
+    if (contract.flows && contract.flows[day] && _.keys(accounts).indexOf(contract.acct)¨=-1 ) {
+        flow = clone(contract.flows[day])
+    }
+    return flow;
+}
+
+</script>
+
+</head>
+
+<body>
+
+   <div>  hello world hi xxddxx</div>
+
+</body>
+
+</html>
