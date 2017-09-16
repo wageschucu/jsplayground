@@ -34,7 +34,7 @@ console.log("Hello World2 days");
 
 // id => path to contract: contracts.household.swisscom, contracts.household.miete
 const contractProto = {
-	start:null, duration:"",end:null, amount:1.0, acct:"", rythm:"", flows : [], unit: "chf"
+	start:null, duration:"",end:null, amount:null, acct:null, rythm:null, flows : [], unit: null
 }
 
 const accounts = {
@@ -59,10 +59,21 @@ const units = {
 	,usd: {eur:1.1, chf:1.0}
 }
 
+// Key	Shorthand
+// years	y
+// quarters	Q
+// months	M
+// weeks	w
+// days	d
+// hours	h
+// minutes	m
+// seconds	s
+// milliseconds	ms
+
 const contracts = {
 	acct: "zahlungs"
 	,unit: "chf"
-	,rythm: "m"
+	,rythm: "M"
 	,household: {
 		swisscom:
 		{

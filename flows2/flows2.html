@@ -26,6 +26,7 @@ function getMergedFlows(start,end,contracts,accounts, units, contractProto)
     // __.mapKeys(days, (value, day) => {
     //     return getMergedFlow(day, normalisedContracts,accounts, units, contractProto); 
     // })
+    return normalisedContracts
 
 }
 function genDays(start, end) {
@@ -34,22 +35,36 @@ function genDays(start, end) {
 }
 function normaliseContracts(contracts, days, accounts, units, contractProto) {
     // go down if contract and in account generate flows
-    let normalisedContracts = __.mapKeys(contracts, (value, prop) => {
-        if (typeof prop === "object" && !contractProto[prop]) {
+     _.forOwn(contracts, (value, prop) => {
+        if (typeof value === "object" && contractProto[prop]===undefined) {
             let subContract = contracts[prop]
-            subContract = extend({}, subContract, filter(contracts, contractProto))
-            subContract.flows = genFlows(subContract, days, accounts)
-            return normaliseContracts(day, subContract,accounts, units, contractProto)
+            subContract = inherit({}, subContract, filter(contracts, contractProto))
+            //subContract.flows = genFlows(subContract, days, accounts)
+            contracts[prop] = normaliseContracts(subContract,days, accounts, units, contractProto)
         }
+
     })
-    normalisedContracts = extend(normalisedContracts, filter(contracts, contractProto))
-    normalisedContracts.flows = genFlows(normalisedContracts, days, accounts, units)
-    return normalisedContracts; 
+    contracts = inherit(contracts, filter(contracts, contractProto))
+    contracts.flows = genFlows(contracts, days, accounts, units)
+    return contracts; 
 }
 
+function findPropOnObject(prop, source) {
+    for (var property in source) {
+        let found=undefined
+        if (prop == property) {
+           found= source[property];
+        } else if (typeof source[property] === "object" ) { 
+            found=findPropOnObject(prop, source[property]);
+        }
+        if (found)
+            return found
+    }
+    return undefined        
+}
 function genFlows(normalisedContract, days, accounts, units) {
     let flows = []
-    if (accounts && units && _.keys(accounts).indexOf(normalisedContract.acct)==-1 )
+    if (accounts && units && !findPropOnObject(normalisedContract.acct, accounts) )
         return flows;
 
     // gen seq
@@ -57,48 +72,61 @@ function genFlows(normalisedContract, days, accounts, units) {
     return _.reduce(sequence, (flows, item, index)=>{ 
         let targetUnit;
         if (accounts)
-            targetUnit = _.keys(targetUnit).head()
+            targetUnit = findPropOnObject("unit", accounts)
         let flow = {}
-        flow.flow = flow: normalisedContract.amount
-        flow.unit = flow: normalisedContract.unit
-        flows[item] = flow;
+        flow.flow = normalisedContract.amount
+        flow.unit = normalisedContract.unit
+        flows[index] = flow;
         if (targetUnit)
-            convert(flow.flow, flow.unit, units, targetUnit) 
+            flow.flow=convert(flow.flow, flow.unit, units, targetUnit) 
 
         ; return flows; 
     },{})
 }
 function getFlowSeq(normalisedContract, days) {
     let flows = {}
-    let first = _.keys(days).head()
-    let last = _.findLastKey(days).last()
+    let first =_.chain(days).keys().head().value()
+    let last = _.findLastKey(days)
+    
+    
     let current = normalisedContract.start
     while (current <= last) {
         if (current >= first)
             flows[current] = {}
+        let oldcurrent=current
         current = moment(current, 'YYYYMMDD').add(1, normalisedContract.rythm).format('YYYYMMDD')
+        if (oldcurrent==current)
+         {
+            throw "constant current date :"+current+" "+normalisedContract            
+         }
     }
-
+    return flows
 }
-function extend(source, extension, target) {
+// deep copy of undefined attributes
+function inherit(source, extension, target) {
     if (!target)
         target={}
     
-    return clone(clone(target, source ), extension)
+    return inheritClone(inheritClone(target, source ), extension)
 }
-function clone(destination, source) {
+// deep copy, but not overwriting dest leaves
+function inheritClone(source, destination, deep) {
     for (var property in source) {
-        if (typeof source[property] === "object" && source[property] !== null && destination[property]) { 
-            clone(destination[property], source[property]);
-        } else {
-            destination[property] = source[property];
+        if ( destination[property]===undefined) {
+            if (typeof source[property] === "object" && deep) { 
+                destination[property] = {}
+                inheritClone(source[property], destination[property]);
+            } else {
+                destination[property] = source[property];
+            }
         }
     }
+    return destination
 }
 function filter(source, objectProto) {
     let destination={}
     for (var property in source) {
-        if (objectProto[property] ) { 
+        if (objectProto[property] ===null ) { 
             destination[property] = source[property];
         }
     }
@@ -109,9 +137,27 @@ function filter(source, objectProto) {
 let testContract = {
     acct: "zahlungs",
     unit: "chf",
-    rythm: "m",
+    rythm: "M",
     start: "20170104", 
     amount:184,
+    parking: {
+        amount:150,
+    },
+    oil: {
+        rythm: "y",
+        start: "20171101", 
+        amount:200,
+    },
+    fluid: {
+        rythm: "Q",
+        start: "20170114", 
+        amount:20,
+    },
+    test: {
+        rythm: "w",
+        start: "20170114", 
+        amount:5,
+    }
 }
 
 function convert(value, unit, units, targetUnit) {
@@ -123,8 +169,9 @@ function convert(value, unit, units, targetUnit) {
     return value;
 }
 
-getMergedFlows(start,end,testContract,accounts, units, contractProto)
+var testflows = getMergedFlows(start,end,testContract,accounts, units, contractProto)
 
+console.log(JSON.stringify(testflows, null, 2))
 function getMergedFlow(day, contracts,units, contractProto) {
     let subContracts = __.mapKeys(contracts, (value, prop) => {
         if (typeof prop === "object" ) {
@@ -177,7 +224,7 @@ function mergeFlow(newFlow, flow, units) {
 function getFlow(day, contract, accounts, units) {
     // normalised contract
     let flow = {}
-    if (contract.flows && contract.flows[day] && _.keys(accounts).indexOf(contract.acct)¨=-1 ) {
+    if (contract.flows && contract.flows[day] && _.keys(accounts).indexOf(contract.acct)!=-1 ) {
         flow = clone(contract.flows[day])
     }
     return flow;
