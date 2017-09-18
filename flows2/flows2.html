@@ -16,19 +16,24 @@
 let start =  moment('20170104' , 'YYYYMMDD' )
 let end = moment('20171231' , 'YYYYMMDD' )
 
-function getMergedFlows(start,end,contracts,accounts, units, contractProto) 
+// get by account
+//   reconcile balance in flow
+// new funciton to merge flows into windows 
+// new funciton to merge accounts flows windows 
+ 
+function getMergedFlows(start,end,contracts,accounts, units, contractProto, targetUnit) 
 { 
     let days=genDays(start,end)
-    let normalisedContracts = normaliseContracts(contracts, days, accounts, units, contractProto)
-    // => { "20170208": {  unit:"chf", flow:-1.0, balance:1.0 } }
-    // each day until end date
-    //  walk contracts recursively gather flows for current day: => merge per day: contract 1 and 2: add all same days together (respect currency conversion)
+    let normalisedContracts = normaliseContracts(contracts, days, contractProto)
+
     let balance=0
      return _.forOwn(days, (value, day) => {
-         let dayflow= getMergedFlowDay(day, normalisedContracts,accounts, units, contractProto); 
+         let dayflow= getMergedFlowDay(day, normalisedContracts,accounts, units, contractProto, targetUnit); 
+
          if (dayflow.flow)
              balance += dayflow.flow
-          dayflow.balance = balance
+          dayflow.balance = Math.round(balance*100)/100
+
          days[day] =  dayflow
     })
 
@@ -38,21 +43,27 @@ function genDays(start, end) {
     let array=Array.apply(0, Array(Math.round(moment.duration(end.diff(start)).asDays()+1) ))
     return array.reduce((object, item, index)=>{  day=moment(start).add(index,'days'); object[day.format('YYYYMMDD')]={}; return object}, {})
 }
-function normaliseContracts(contracts, days, accounts, units, contractProto) {
-    // go down if contract and in account generate flows
-     _.forOwn(contracts, (value, prop) => {
-        if (typeof value === "object" && contractProto[prop]===undefined) {
-            let subContract = contracts[prop]
-            subContract = inherit({}, subContract, filter(contracts, contractProto))
-            //subContract.flows = genFlows(subContract, days, accounts)
-            contracts[prop] = normaliseContracts(subContract,days, accounts, units, contractProto)
-        }
 
-    })
-    contracts = inherit(contracts, filter(contracts, contractProto))
-    normalizeDates(contracts)
-    contracts.flows = genFlows(contracts, days, accounts, units)
-    return contracts; 
+// inherit deep 
+// walk apply normalizedates
+// walk apply gen flows
+
+function normaliseContracts(contracts, days, contractProto) {
+        contracts = inherit(contracts, {} , contractProto, true)
+        walkPojo(contracts, normalizeDates)
+        walkPojo(contracts, contracts=>genFlows(contracts, days))
+        return contracts
+}
+
+function walkPojo(source, iterator)
+{
+    iterator(source)
+    for (var property in source) {
+        if (typeof source[property] === "object") { 
+            walkPojo(source[property], iterator)   
+        }
+    } 
+
 }
 function normalizeDates(contract) {
     // set start
@@ -90,26 +101,26 @@ function findPropOnObject(prop, source) {
     }
     return undefined        
 }
-function genFlows(normalisedContract, days, accounts, units) {
-    let flows = []
-    if (accounts && units && !findPropOnObject(normalisedContract.acct, accounts) )
-        return flows;
+function genFlows(normalisedContract, days) {
+
+    if (!normalisedContract.amount || !normalisedContract.unit || !normalisedContract.start)
+        return 
+    let flows = {}
 
     // gen seq
     let sequence = getFlowSeq(normalisedContract, days)
-    return _.reduce(sequence, (flows, item, index)=>{ 
-        let targetUnit;
-        if (accounts)
-            targetUnit = findPropOnObject("unit", accounts)
+
+    _.reduce(sequence, (flows, item, index)=>{ 
         let flow = {}
         flow.flow = normalisedContract.amount
         flow.unit = normalisedContract.unit
         flows[index] = flow;
-        if (targetUnit)
-            flow.flow=convert(flow.flow, flow.unit, units, targetUnit) 
 
         ; return flows; 
-    },{})
+    },flows)
+    console.log("hii")
+    normalisedContract.flows = flows;
+
 }
 function getFlowSeq(normalisedContract, days) {
     let flows = {}
@@ -134,35 +145,47 @@ function getFlowSeq(normalisedContract, days) {
     return flows
 }
 // deep copy of undefined attributes
-function inherit(source, extension, target) {
-    if (!target)
-        target={}
-    
-    return inheritClone(inheritClone(target, source ), extension)
-}
-// deep copy, but not overwriting dest leaves
-function inheritClone(source, destination, deep) {
-    for (var property in source) {
-        if ( destination[property]===undefined) {
-            if (typeof source[property] === "object" && deep) { 
-                destination[property] = {}
-                inheritClone(source[property], destination[property]);
-            } else {
-                destination[property] = source[property];
-            }
+function inherit(source, parent , prototype, deep) {
+    // filter parent 
+    let target  = {}
+
+    // copy source props
+    //   if prop in prototype: deep copy/clone 
+    for (var prop in source) {
+        if ( prototype[prop] === null )
+            target[prop] = source[prop]
+    }
+
+    // inheit from parent
+    for (var prop in parent) {
+        if (prototype[prop] === null &&  target[prop]===undefined && parent[prop]!== undefined )
+            target[prop] = parent[prop]
+    }
+
+    for (var prop in source) {
+        if (prototype[prop] === undefined &&  typeof source[prop] == "object"  ) {
+            if (deep)
+                target[prop] = inherit(source[prop], target, prototype, deep)
+            else 
+                target[prop] = source[prop]
         }
     }
-    return destination
+
+    return target
 }
-function filter(source, objectProto) {
-    let destination={}
+
+// deep copy, but not overwriting dest leaves
+function clone(source, deep) {
+    let destination = {}
     for (var property in source) {
-        if (objectProto[property] ===null ) { 
+        if (typeof source[property] === "object" && deep) { 
+            destination[property] = {}
+            inheritClone(source[property], destination[property]);
+        } else {
             destination[property] = source[property];
         }
-    }
+       }
     return destination
-
 }
 
 let testContract = {
@@ -192,6 +215,13 @@ let testContract = {
     income: {
         start: "201701end", 
         amount:-350,
+        unit:"eur"
+    },
+    income2: {
+        acct: "checking",
+        start: "201701end", 
+        amount:-300,
+        unit:"usd"
     },
 }
 
@@ -200,29 +230,26 @@ function convert(value, unit, units, targetUnit) {
     {
         let factor = getConversionFactor(unit, units, targetUnit)
         value = value * factor 
+        value = Math.round(value*100)/100
     }
     return value;
 }
-
-var testflows = getMergedFlows(start,end,testContract,accounts, units, contractProto)
+var normalizedAcccounts = inherit(accounts,{}, prototypeAccount, true);
+// normalizedAcccounts.post.zahlungs
+var testflows = getMergedFlows(start,end,testContract, {zahlungs: normalizedAcccounts.post.zahlungs}, units, contractProto, "chf")
 
 console.log(JSON.stringify(testflows, null, 2))
 
-function getMergedFlowDay(day, contracts,accounts, units, contractProto) {
+function getMergedFlowDay(day, contracts,accounts, units, contractProto, targetUnit) {
     // get flow
-    let topLevelFlow = getFlow(day, contracts, accounts, units)
+    let topLevelFlow = getFlow(day, contracts, accounts, units, targetUnit)
     // get subflow
     //   reduce sub contracts
     let mergedFlows = _.reduce(contracts, (flow, item, index) => {
 
-    //      if subcontract
-    //          new flow = getMergedFlowDay
-    //          merge to subflow
-    // merge flow and subflow
-    // return merged flow
         if (typeof item === "object" && contractProto[index]===undefined) {
             let subContract = item
-            let newFlow= getMergedFlowDay(day, subContract,accounts, units, contractProto)
+            let newFlow= getMergedFlowDay(day, subContract,accounts, units, contractProto, targetUnit)
             flow =  mergeFlow(newFlow, flow, units)
         }
         return flow
@@ -260,14 +287,28 @@ function mergeFlow(newFlow, flow, units) {
     mergedFlow.flow = mergeNumber(newFlow, flow, "flow", units, mergedFlow.unit )
     return mergedFlow
 }
-function getFlow(day, contract, accounts, units) {
+function getFlow(day, normalisedContract, accounts, units, targetUnit) {
     // normalised contract
     let flow = {}
-    if (contract.flows && contract.flows[day] && findPropOnObject(contract.acct, accounts) ) {
-        flow = inheritClone(contract.flows[day], {})
+
+    if (normalisedContract.flows && normalisedContract.flows[day] && findPropOnObject(normalisedContract.acct, accounts) ) {
+        
+        flow = normalisedContract.flows[day]
+        // convert?
+
+        flow.flow = normalisedContract.amount
+        flow.unit = normalisedContract.unit
+ 
+        if (targetUnit != flow.unit) {
+            flow.flow=convert(flow.flow, flow.unit, units, targetUnit) 
+            flow.unit = targetUnit
+        }
     }
     return flow;
 }
+
+
+
 
 </script>
 

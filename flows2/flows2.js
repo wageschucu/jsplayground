@@ -34,29 +34,32 @@ console.log("Hello World2 days");
 
 // id => path to contract: contracts.household.swisscom, contracts.household.miete
 const contractProto = {
-	start:null, duration:"",end:null, amount:null, acct:null, rythm:null, flows : [], unit: null
+	start:null, duration:null,end:null, amount:null, acct:null, rythm:null, flows : [], unit: null
+}
+const prototypeAccount = {
+	unit:null, balances: []
 }
 
 const accounts = {
 	post : {
 		unit:"chf" 
-		,zahlungs : { }
-		,usd : { unit:"usd" }
-		,eur : { unit:"eur" }
+		,zahlungs : { balances :{'20170101' : 1000 } }
+		,usd : { unit:"usd", balances :{'20170101' : 100 }}
+		,eur : { unit:"eur",  balances :{'20170101' : 10 }}
 		,spar : { }
 		,"3a" : { }
 	}
 	,tnb : {
 		unit:"usd" 
-		,checking: {}
+		,checking: {balances :{'20170101' : 2000 }}
 		,savings: {}
 	}
 }
 
 const units = {
-	chf: {eur:1.1, usd:1.0}
-	,eur: {chf:1/1.1, usd:1/1.1}
-	,usd: {eur:1.1, chf:1.0}
+	chf: {eur:1/1.1, usd:1.0}
+	,eur: {chf:1.1, usd:1.1}
+	,usd: {eur:1/1.1, chf:1.0}
 }
 
 // Key	Shorthand
