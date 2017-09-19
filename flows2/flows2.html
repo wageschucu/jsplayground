@@ -10,6 +10,9 @@
  -->    <script type="text/javascript" src="moment-with-locales.js"></script>
  <script type="text/javascript" src="lodash.js"></script>
     <script type="text/javascript" src="flows2.js"></script>
+    <script type="text/javascript" src="jquery-3.2.1.js"></script>
+
+
     <script type="text/javascript">
 
 
@@ -460,34 +463,78 @@ let testContract = {
 
 let start =  moment('20170101' , 'YYYYMMDD' )
 let end = moment('20171231' , 'YYYYMMDD' )
-let windowSize= "w"
+let windowSize= "M"
+    let targetAccounts = ["zahlungs", "checking", "spar"]
+    let targetCurrency = "chf"
 
-let days=genDays(start,end)
-let normalisedContracts = normaliseContracts(testContract, days, contractProto)
+function refreshWindows() {
+    let days=genDays(start,end)
+    let normalisedContracts = normaliseContracts(testContract, days, contractProto)
 
-var normalizedAcccounts = inherit(accounts,{}, prototypeAccount, true);
-let targetAccounts = ["zahlungs"]
-//let targetAccounts = ["zahlungs", "checking", "spar"]
-//let accountExtract = extractAccount(account, normalizedAcccounts);
+    var normalizedAcccounts = inherit(accounts,{}, prototypeAccount, true);
+    //let targetAccounts = ["zahlungs"]
+    //let accountExtract = extractAccount(account, normalizedAcccounts);
 
-var mergedFlows = getMergedFlowsAllAccounts(days,normalisedContracts, normalizedAcccounts, targetAccounts, units, contractProto, "chf")
+    var mergedFlows = getMergedFlowsAllAccounts(days,normalisedContracts, normalizedAcccounts, targetAccounts, units, contractProto, targetCurrency)
 
-console.log(JSON.stringify(mergedFlows, null, 2))
+    console.log(JSON.stringify(mergedFlows, null, 2))
+     
+    var windowedFlows = mergeToWindow(mergedFlows , windowSize)
 
-var windowedFlows = mergeToWindow(mergedFlows , "w")
+    console.log(JSON.stringify(windowedFlows, null, 2))
+    buildTable();
 
-console.log(JSON.stringify(windowedFlows, null, 2))
+    function buildTable(){
+        $('#flows').empty();
 
+        $('<div>').text("window:").append($input=$('<input>').val(windowSize).on('blur', (e)=>{
+            windowSize=e.target.value; refreshWindows()
+            }
+             ))
+                .appendTo($('#flows'))
+        $('<div>').text("start:"+start.format('YYYYMMDD'))
+                .appendTo($('#flows'))
+        $('<div>').text("end:"+end.format('YYYYMMDD'))
+                .appendTo($('#flows'))
+        $('<div>').text("targetAccounts:"+targetAccounts)
+                .appendTo($('#flows'))
+        $('<div>').text("targetCurrency:").append($('<input>').val(targetCurrency).on('blur', (e)=>{
+            targetCurrency=e.target.value; refreshWindows()
+            }
+             ))
+                .appendTo($('#flows'))
 
+        let $table = $('<table>')
+        $table.css("border","1px solid #000");
+        let $header= $('<tr>').appendTo(
+            $table
+                .appendTo($('#flows'))
+            )
 
+        _.each(windowedFlows, (wind, day)=>{
+            $header.append($('<td>').text(day.split('-')[0])
+              .css("border","1px solid #000"));
 
+            })
+
+        let $tr = $('<tr>').appendTo($table)
+        _.each(windowedFlows, (wind, day)=>{
+            $tr.append($('<td>').text("b:"+wind.balance+" f:"+wind.flow)
+              .css("border","1px solid #000"));
+            })
+
+    }
+
+}
+
+$(refreshWindows)
 </script>
 
 </head>
 
 <body>
 
-   <div>  hello world hi xxddxx</div>
+   <div id="flows">  </div>
 
 </body>
 
