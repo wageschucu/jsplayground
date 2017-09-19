@@ -29,21 +29,48 @@
 
 function mergeToWindow(mergedFlows, windowSize, units, targetUnit) {
     let mergeWindowSeq = getWindowSeq(mergedFlows, windowSize)
-    let flows = _.flatMap(mergedFlows, (flow, day)=> {
-        return {day:flow}
+    let flowsArray = _.flatMap(mergedFlows, (flow, day)=> {
+        flow.day = day
+        return flow
     });
     let flowIndex=0;
     _.each(mergeWindowSeq, (windowFlow, wind)=> {
         let windowBegin = wind.split("-")[0]
         let windowEnd = wind.split("-")[1]
-        let flow = flows[flowIndex]
-        while (flow >= windowBegin && flow <= windowEnd) {
+        let flow = flowsArray[flowIndex]
+        while (flow && flow.day >= windowBegin && flow.day <= windowEnd) {
             // merge
-
+            mergeWindowSeq[wind] = mergeFlow(flow, mergeWindowSeq[wind] , units, targetUnit,true)
             flowIndex++
-            flow = flows[flowIndex]
+            flow = flowsArray[flowIndex]
         }
     });
+    return mergeWindowSeq;
+}
+function getWindowSeq(flows, rythm) {
+    let windowFlows = {}
+    let first =_.chain(flows).keys().head().value()
+    let last = _.findLastKey(flows)
+    
+    
+    let start = first
+    let current = start
+    let next; 
+
+    // current and next: last-next-1-rythm
+    
+    while (current <= last) {
+        next = moment(current, 'YYYYMMDD').add(1, rythm).format('YYYYMMDD')
+        nextminusone = moment(next, 'YYYYMMDD').add(-1, "d").format('YYYYMMDD')
+        windowFlows[current+"-"+nextminusone+"-"+rythm] = {}
+
+        if (next==current)
+        {
+            throw "constant current date :"+current+" , rythm: "+rythm            
+        }
+        current = next 
+    }
+    return windowFlows
 }
 
 function getMergedFlowsAllAccounts(days,normalisedContracts,normalizedAcccounts, targetAccounts, units, contractProto, targetUnit) 
@@ -144,10 +171,10 @@ function getMergedFlowDayAllContracts(day, contracts,account, units, contractPro
     return mergedFlows;
 }
 
-function mergeFlow(newFlow, flow, units, targetUnit) {
+function mergeFlow(newFlow, flow, units, targetUnit, aggregate) {
     let mergedFlow = { }
     mergedFlow.unit = targetUnit || (flow&&flow.unit) || (newFlow&&newFlow.unit)
-    mergedFlow.balance = mergeNumber(newFlow, flow, "balance", units, mergedFlow.unit )
+    mergedFlow.balance = mergeNumber(newFlow, flow, "balance", units, mergedFlow.unit, aggregate)
     mergedFlow.flow = mergeNumber(newFlow, flow, "flow", units, mergedFlow.unit )
     
     mergedFlow.accounts = mergeSets(newFlow&&newFlow.accounts, flow&&flow.accounts)
@@ -259,31 +286,6 @@ function getFlowSeq(normalisedContract, days) {
     }
     return flows
 }
-function getWindowSeq(flows, rythm) {
-    let windowFlows = {}
-    let first =_.chain(flows).keys().head().value()
-    let last = _.findLastKey(flows)
-    
-    
-    let start = first
-    let current = start
-    let iteration=0;
-    // current and next: last-next-1-rythm
-    // 
-    while (current <= last) {
-        iteration++
-        if (current >= first)
-            windowFlows[current] = {}
-        let oldcurrent=current
-
-        current = moment(start, 'YYYYMMDD').add(iteration, rythm).format('YYYYMMDD')
-        if (oldcurrent==current)
-        {
-            throw "constant current date :"+current+" , rythm: "+rythm            
-        }
-    }
-    return windowFlows
-}
 // deep copy of undefined attributes
 function inherit(source, parent , prototype, deep) {
     // filter parent 
@@ -350,15 +352,21 @@ function getConversionFactor(unit, units, targetUnit) {
     else
         throw new Error("no conversion for : "+unit+" to "+targetUnit)
 }
-function mergeNumber(newFlow, flow, prop, units, unit) {
+function mergeNumber(newFlow, flow, prop, units, unit, aggregate) {
     let newValue = 0.0
     let wasSet=false
-    if (newFlow&&newFlow[prop]) {
-        newValue += convert(newFlow[prop], newFlow.unit, units, unit)
+    if (flow&&flow[prop]) {
+        if (aggregate)
+            newValue = convert(flow[prop], flow.unit, units, unit)
+        else
+            newValue += convert(flow[prop], flow.unit, units, unit)
         wasSet= true
     }
-    if (flow&&flow[prop]) {
-        newValue += convert(flow[prop], flow.unit, units, unit)
+    if (newFlow&&newFlow[prop]) {
+        if (aggregate)
+            newValue = convert(newFlow[prop], newFlow.unit, units, unit)
+        else
+            newValue += convert(newFlow[prop], newFlow.unit, units, unit)
         wasSet= true
     }
 
@@ -450,7 +458,7 @@ let testContract = {
     },
 }
 
-let start =  moment('20170104' , 'YYYYMMDD' )
+let start =  moment('20170101' , 'YYYYMMDD' )
 let end = moment('20171231' , 'YYYYMMDD' )
 let windowSize= "w"
 
@@ -458,16 +466,17 @@ let days=genDays(start,end)
 let normalisedContracts = normaliseContracts(testContract, days, contractProto)
 
 var normalizedAcccounts = inherit(accounts,{}, prototypeAccount, true);
-let targetAccounts = ["zahlungs", "checking", "spar"]
+let targetAccounts = ["zahlungs"]
+//let targetAccounts = ["zahlungs", "checking", "spar"]
 //let accountExtract = extractAccount(account, normalizedAcccounts);
 
 var mergedFlows = getMergedFlowsAllAccounts(days,normalisedContracts, normalizedAcccounts, targetAccounts, units, contractProto, "chf")
 
 console.log(JSON.stringify(mergedFlows, null, 2))
 
-//var windowedFlows = getWindowedFlows(mergedFlows , "M")
+var windowedFlows = mergeToWindow(mergedFlows , "w")
 
-//console.log(JSON.stringify(windowedFlows, null, 2))
+console.log(JSON.stringify(windowedFlows, null, 2))
 
 
 
