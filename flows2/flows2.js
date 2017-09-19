@@ -33,45 +33,6 @@ console.log("Hello World2 days");
 // daySequence(moment().subtract(10,'days'), moment().subtract(8,'days')).each(day=>console.log(day))
 
 // id => path to contract: contracts.household.swisscom, contracts.household.miete
-const contractProto = {
-	start:null, duration:null,end:null, amount:null, acct:null, rythm:null, flows : [], unit: null
-}
-const prototypeAccount = {
-	unit:null, balances: []
-}
-
-const accounts = {
-	post : {
-		unit:"chf" 
-		,zahlungs : { balances :{'20170101' : 1000 } }
-		,usd : { unit:"usd", balances :{'20170101' : 100 }}
-		,eur : { unit:"eur",  balances :{'20170101' : 10 }}
-		,spar : { }
-		,"3a" : { }
-	}
-	,tnb : {
-		unit:"usd" 
-		,checking: {balances :{'20170101' : 2000 }}
-		,savings: {}
-	}
-}
-
-const units = {
-	chf: {eur:1/1.1, usd:1.0}
-	,eur: {chf:1.1, usd:1.1}
-	,usd: {eur:1/1.1, chf:1.0}
-}
-
-// Key	Shorthand
-// years	y
-// quarters	Q
-// months	M
-// weeks	w
-// days	d
-// hours	h
-// minutes	m
-// seconds	s
-// milliseconds	ms
 
 const contracts = {
 	acct: "zahlungs"
@@ -140,10 +101,10 @@ const contracts = {
 			}
 		}
 		,farm: {
-			start: "201703end", amount:-1000, rythm: "q", acct: "checking"
+			start: "201703end", amount:-1000, rythm: "Q", acct: "checking"
 		}
 		,tnb: {
-			start: "201703end", amount:-4000, rythm: "q", acct: "checking"
+			start: "201703end", amount:-4000, rythm: "Q", acct: "checking"
 		}
 	}
 	,post : {
