@@ -98,9 +98,10 @@ function getMergedFlowsAllAccounts(days,normalisedContracts,normalizedAcccounts,
     _.each(targetAccounts, (account) => {
         let balance=0
         let balances =  findPropOnObject("balances", findPropOnObject(account, normalizedAcccounts));
+        let accountUnit =  findPropOnObject("unit", findPropOnObject(account, normalizedAcccounts));
         let mergedFlows = {}
         _.forOwn(days, (value, day) => {
-             let dayflow= getMergedFlowDayAllContracts(day, normalisedContracts,account, units, contractProto, targetUnit); 
+             let dayflow= getMergedFlowDayAllContracts(day, normalisedContracts,account, units, contractProto, accountUnit); 
 
              dayflow.accounts=new Set().add(account)
                           
@@ -117,7 +118,7 @@ function getMergedFlowsAllAccounts(days,normalisedContracts,normalizedAcccounts,
                   balance = balances[day]
               }   
               dayflow.balance = balance
-              dayFlowAllAccounts[day] = mergeFlow(dayflow, dayFlowAllAccounts[day] , units, targetUnit)
+              dayFlowAllAccounts[day] = mergeFlow(dayflow, dayFlowAllAccounts[day] , units, accountUnit)
         }) 
 
     })
@@ -442,20 +443,20 @@ const accounts = {
         ,eur : { unit:"eur",  balances :{'20170101' : 10 }}
         ,spar : { }
         ,"3a" : { }
-    }
+     }
     ,tnb : {
         unit:"usd" 
         ,checking: {
             balances :{'20170101' : 2000 }
         }
         ,savings: {}
-    }
+     }
 }
 
 const units = {
-    chf: {eur:1/1.1, usd:1.0}
-    ,eur: {chf:1.1, usd:1.1}
-    ,usd: {eur:1/1.1, chf:1.0}
+    chf: {eur:1/1.2, usd:1.1}
+    ,eur: {chf:1.2, usd:1.1}
+    ,usd: {eur:1/1.1, chf:1/1.1}
 }
 
 // Key  Shorthand
@@ -471,7 +472,7 @@ const units = {
 let testContract = {
     acct: "zahlungs",
     unit: "chf",
-    rythm: "M",
+   rythm: "M",
     start: "20170104", 
     amount:184,
     parking: {
@@ -512,7 +513,7 @@ let testContract = {
 
 let start =  moment('20170101' , 'YYYYMMDD' )
 let end = moment('20171231' , 'YYYYMMDD' )
-let windowSize= "Q"
+let windowSize= "M"
 
 //let targetAccounts = ["zahlungs", "checking", "spar"]
 let targetCurrency = "chf"
@@ -569,7 +570,7 @@ function refreshWindows() {
        if (!targetContract.amount) 
         return 
 
-        let mergedFlows = getMergedFlowsAllAccounts(days, targetContract, normalizedAcccounts, undefined, units, contractProto, targetCurrency)
+        let mergedFlows = getMergedFlowsAllAccounts(days, targetContract, normalizedAcccounts, undefined, units, contractProto, targetContract.unit)
 
         console.log(JSON.stringify(mergedFlows, null, 2))
         let windowedFlows = mergeToWindow(mergedFlows , windowSize)
