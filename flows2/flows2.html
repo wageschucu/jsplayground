@@ -349,8 +349,13 @@ function inherit(source, parent , prototype, deep) {
 
     // inheit from parent
     for (var prop in parent) {
-        if (prototype[prop] === null &&  target[prop]===undefined && parent[prop]!== undefined )
+        if (prototype[prop] === null &&  target[prop]===undefined && parent[prop]!== undefined ) {
             target[prop] = parent[prop]
+            if (prototype.inherited) {
+                target.inherited = target.inherited || []
+                target.inherited.push(prop)
+            }
+        }
     }
 
     for (var prop in source) {
@@ -424,10 +429,10 @@ Set.prototype.toJSON = function toJSON() {
 }
 
 const contractProto = {
-    start:null, duration:null,end:null, amount:null, acct:null, rythm:null, flows : [], unit: null
+    start:null, duration:null,end:null, amount:null, acct:null, rythm:null, flows : [], unit: null, inherited : []
 }
 const prototypeAccount = {
-    unit:null, balances: []
+    unit:null, balances: [], inherited : []
 }
 
 const accounts = {
@@ -612,8 +617,11 @@ function refreshWindows() {
                 .appendTo($('#flows'))
             )
 
-        $header.append($('<td>').text("name")
-          .css("border","1px solid #000"));
+        $header
+            .append($('<td>').text("+-"))
+            .append($('<td>').text("name")
+            .css("border","1px solid #000"))
+            ;
 
         _.each(contractProto, (value, prop)=>{
             if (value==null)
@@ -661,10 +669,17 @@ function refreshWindows() {
             .on("click", toggleShow)
             
         }
+
         let $tr = $('<tr>')
             .data("path", path+"."+(contractName?contractName:""))
             .appendTo($appendPoint)
             .on("click", toggleHide)
+
+        $tr.append(
+            $('<td>')
+            .text('-')
+            .addClass('plusminus')
+            )
 
         $tr.append($('<td>')
             .text((contractName?contractName:""))
@@ -674,13 +689,16 @@ function refreshWindows() {
         ;
 
         _.each(contractProto, (value, prop)=>{
-            if (value==null)
-                $tr.append($('<td>').text(targetContract[prop])
+            if (value==null) {
+                let $td;
+                $tr.append($td=$('<td>').text(targetContract[prop])
                   .css("border","1px solid #000")
                   .css("padding-left", ' '+(level*10)+"px")
                   );
-
-                })
+                if (targetContract && targetContract.inherited && targetContract.inherited.indexOf(prop)!=-1) {
+                    $td.css("background-color", "lightgrey")
+                }
+                }})
 
         _.each(windowedFlows, (wind, day)=>{
             $tr.append($('<td>').text(wind.flow)
@@ -694,6 +712,7 @@ function refreshWindows() {
         
         let $tr = $('<tr>').appendTo($appendPoint)
 
+        $tr.append($('<td>').text(''))
         $tr.append($('<td>').text(contractName)
           .css("border","1px solid #000"));
         _.each(contractProto, (value, prop)=>{
