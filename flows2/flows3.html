@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Flows2</title>
+    <!--     <script type="text/javascript" src="lazy.js"></script>
+ -->
+    <!-- optional: if you want support for DOM event and AJAX-based sequences: -->
+    <!--     <script type="text/javascript" src="lazy.browser.js"></script>
+ -->
+    <script type="text/javascript" src="moment-with-locales.js"></script>
+    <script type="text/javascript" src="lodash.js"></script>
+    <script type="text/javascript" src="flows2.js"></script>
+    <script type="text/javascript" src="jquery-3.2.1.js"></script>
+    <script type="text/javascript">
+
+    // [accountNames],[all-flows]=> genAllAccountLines => [chunkFlows], Total-chunkedFlows
+    function genAllAccountLines(accountNames, allFlows, unit, rythm) {
+        // walk-contracts
+        let result = { totalFlows: {}, allChunkedFlows: [] }
+        accountNames.forEach(accountName => {
+            let balances = findPropOnObject("balances", findPropOnObject(accountName, accounts))
+            result.allChunkedFlows.push(genAccountLine(allFlows, balances, unit, rythm, accountName))
+        })
+        return result
+    }
+
+    // contracts,start,end => genAllContractLines => [all-chunkFlows],[all-flows]
+    function genAllContractLines(normalizedContracts, start, end, rythm) {
+        // walk-contracts
+        let result = { allFlows: [], allChunkedFlows: [] }
+        walkPojo(normalizedContracts, contract => {
+            let result = genContractLine(contract, start, end, rythm)
+            result.allFlows.push(result.flows)
+            result.allChunkedFlows.push(result.chunkedFlows)
+        })
+        return result
+    }
+
+    // [all-flows],accountName,unit=>genAccountLine=>flows{windows:{ amount, unit, accounts, balance },...}
+    function genAccountLine(allFlows, balances, unit, rythm, accountName) {
+
+        let rolledUpFlows = rollupFlows(allFlows, [accountName], unit)
+        let actualFlows = actualizeFlows(rolledUpFlows, balances)
+        let chunkedFlows = chunkFlows(actualFlows, rythm)
+        return chunkedFlows
+    }
+
+    function rollupFlows(allFlows, accountNames, unit) {
+        let start = _.chain(flows).keys().head().value()
+        let end = _.findLastKey(flows)
+        let rolledUpFlows = genFlows(start, end, null, "d")
+
+        allFlows.forEach(flows => {
+            // filter out none listed accounts
+            let flow = _.chain(flows).head().value()
+            if (accountNames && accountNames.length && accountNames[0] !== undefined && (!flow || flow.account || accountNames.indexOf(flow.account) != -1))
+                return
+
+            rolledUpFlows.forEach((rollup, day) => {
+                rolledUpFlows[day] = mergeFlow(rollup, flows[day], unit)
+            })
+        }) return rolledUpFlows
+    }
+
+    // contract,start,end,unit,rythm=>genContractLine=>chunkFlows
+    function genContractLine(normalizedContract, start, end, rythm) {
+        let result = {}
+        result.flows = genFlows(start, end, null, normalizedContract)
+        result.chunkedFlows = hunkedFlows(result.flows, rythm)
+        return result
+    }
+
+    // contract,start,end,unit=>genFlows=>flows{day:{ amount, unit, account },...}
+
+    function genFlows(start, end, rythm, normalizedContract) {
+        let flows = {}
+        if (normalizedContract && normalisedContract.start > start)
+            start = normalisedContract.start
+        if (normalizedContract && normalisedContract.end < end)
+            end = normalisedContract.end
+        if (normalizedContract && !rythm)
+            rythm = normalisedContract.rythm
+
+        let current = start
+        let next;
+
+        while (current <= end) {
+            if (current >= first) {
+                let flow = {}
+                if (normalisedContract) {
+                    flow.amount = normalisedContract.amount
+                    flow.unit = normalisedContract.unit
+                    flow.account = normalisedContract.account
+                }
+                flows[current] = flow;
+            }
+            let oldcurrent = current
+            next = moment(start, 'YYYYMMDD').add(1, rythm).format('YYYYMMDD')
+            if (oldcurrent == current) { // in case moment duration/rythm code is incorrect:moment returns same date
+                throw "constant current date :" + current + " rythm: " + rythm
+            }
+            current = next;
+        }
+        return flows
+    }
+
+
+    // flows/actualFlows,rythm=>chunkFlows=>chunkedFlows{windows:{ amount, unit, accounts },...}
+    // create window and gather flows and merge them
+    function chunkedFlows(flows, rythm) {
+        let start = _.chain(flows).keys().head().value()
+        let last = _.findLastKey(flows)
+        let chunkedFlows = {}
+
+        let current = start
+        let next;
+
+        // current and next: last-next-1-rythm
+
+        while (current <= last) {
+            next = moment(current, 'YYYYMMDD').add(1, rythm).format('YYYYMMDD')
+            let nextminusone = moment(next, 'YYYYMMDD').add(-1, "d").format('YYYYMMDD')
+            let chunkName = current + "-" + nextminusone + "-" + rythm
+
+            chunkedFlows[chunkName] = gatherAndMergeFlows(current, nextminusone, flows)
+
+            if (next == current) {
+                throw "constant current date :" + current + " , rythm: " + rythm
+            }
+            current = next
+        }
+        return chunkedFlows
+    }
+
+    function gatherAndMergeFlows(start, last, flows) {
+        let chunk = { flow: 0 }
+        let current = start
+        while (current <= last) {
+            chunk = mergeFlow(chunk, flows[current])
+            next = moment(current, 'YYYYMMDD').add(1, rythm).format('YYYYMMDD')
+            current = next
+        }
+        return chuck
+    }
+    // mergeFlow - flow,unit,account:lazy init unit,account,add flow
+    function mergeFlow(oldFlow, flow, unit) {
+        let merged = {}
+        merged.unit = unit || oldFlow.unit || flow && flow.unit
+        merged.account = oldFlow.account || flow && flow.account
+        merged.amount = oldFlow.amount || 0
+        merged.balance = oldFlow.balance
+        merged.oldBalance = oldFlow.oldBalance
+
+        if (flow && flow.amount)
+            merged.amount += convert(flow.amount, flow.unit, merged.unit)
+
+        return merged
+    }
+
+    function convert(value, unit, targetUnit) {
+        if (unit && unit != targetUnit) {
+            let factor = getConversionFactor(unit, units, targetUnit)
+            value = value * factor
+            value = Math.round(value * 100) / 100
+        }
+        return value;
+    }
+
+    // flows,account:{balances,unit,...}=>actualizeFlows=>actualFlows{day:{ amount, unit, account, balance, oldBalance,.. },...}
+    function actualizeFlows(flows, balances) {
+        let balance = 0
+        _.reduce(sequence, (flows, flow, day) => {
+            balance += flow.amount
+            flow.balance = balance
+            if (balances[day]) {
+                flow.oldBalance = flow.balance
+                flow.balance = balances[day]
+            }
+            return flows
+        }, flows)
+
+        return flows
+    }
+
+    function findPropOnObject(prop, source) {
+        for (var property in source) {
+            let found = undefined
+            if (prop == property) {
+                found = source[property];
+            } else if (typeof source[property] === "object") {
+                found = findPropOnObject(prop, source[property]);
+            }
+            if (found)
+                return found
+        }
+        return undefined
+    }
+
+    function normalizeAmount(contract) {
+        // set start
+        // norm start
+        if (!contract.amount)
+            return
+        contract.amount = -contract.amount
+    }
+
+    function normalizeDates(contract) {
+        // set start
+        // norm start
+        if (!contract.start)
+            return
+        normalizeDate(contract, "start")
+        normalizeDate(contract, "end")
+    }
+
+    function normalizeDate(contract, prop) {
+        // set start
+        // norm start
+        let date = contract[prop];
+        if (date) {
+            let endMarker = "end"
+            if (date.indexOf(endMarker) == date.length - endMarker.length) {
+                if (date.length != 6 + endMarker.length)
+                    throw "date not YYYYMM formate: " + JSON.stringify(contract, null, 2)
+                let begin = moment(date.substring(0, 6), 'YYYYMM')
+                let end = begin.endOf('month');
+                contract[prop] = end.format('YYYYMMDD')
+            }
+        }
+    }
+
+    function normaliseContracts(contracts, contractProto) {
+        contracts = inherit(contracts, {}, contractProto, true)
+        walkPojo(contracts, normalizeDates)
+        walkPojo(contracts, normalizeAmount)
+        return contracts
+    }
+
+    function normaliseAccounts(accounts, start, end, prototypeAccount) {
+        let normalizedAcccounts = inherit(accounts, {}, prototypeAccount, true);
+        // bring last balance before start day forward, if start day does not have balance ??
+        // go down balances until >= start day, if start day not defined and there is one before copy it in on start day
+
+        function bringFowardOldBalance() {
+
+        }
+        walkPojo(normalizedAcccounts, bringFowardOldBalance)
+        return normalizedAcccounts
+    }
+
+    Set.prototype.toJSON = function toJSON() {
+        return [...Set.prototype.values.call(this)];
+    }
+
+    const contractProto = {
+        start: null,
+        duration: null,
+        end: null,
+        amount: null,
+        acct: null,
+        rythm: null,
+        flows: [],
+        unit: null,
+        inherited: []
+    }
+    const prototypeAccount = {
+        unit: null,
+        balances: [],
+        inherited: []
+    }
+
+    const accounts = {
+        post: {
+            unit: "chf",
+            zahlungs: {
+                balances: { '20170104': 1000, '20171231': 600, },
+            },
+            spar: {
+                start: 20170101,
+                rythm: "M",
+                amount: 1000
+            },
+            usd: { unit: "usd", balances: { '20170101': 100 } },
+            eur: { unit: "eur", balances: { '20170101': 10 } },
+            spar: {},
+            "3a": {}
+        },
+        tnb: {
+            unit: "usd",
+            checking: {
+                balances: { '20170101': 2000 }
+            },
+            savings: {}
+        }
+    }
+
+    const units = {
+        chf: { eur: 1 / 1.2, usd: 1.1 },
+        eur: { chf: 1.2, usd: 1.1 },
+        usd: { eur: 1 / 1.1, chf: 1 / 1.1 }
+    }
+
+    // Key  Shorthand
+    // years    y
+    // quarters Q
+    // months   M
+    // weeks    w
+    // days d
+    // hours    h
+    // minutes  m
+    // seconds  s
+    // milliseconds ms
+    let testContract = {
+        acct: "zahlungs",
+        unit: "chf",
+        rythm: "M",
+        start: "20170104",
+        amount: 184,
+        parking: {
+            amount: 150,
+        },
+        oil: {
+            rythm: "y",
+            start: "20171101",
+            amount: 200,
+        },
+        fluid: {
+            rythm: "Q",
+            start: "20170114",
+            amount: 20,
+        },
+        test: {
+            rythm: "w",
+            start: "20170114",
+            amount: 5,
+            testsub: {
+                rythm: "w",
+                start: "20170114",
+                amount: 5,
+            },
+        },
+        income: {
+            start: "201701end",
+            amount: -350,
+            unit: "eur"
+        },
+        income2: {
+            acct: "checking",
+            start: "201701end",
+            amount: -300,
+            unit: "usd"
+        },
+    }
+
+    let start = moment('20170101', 'YYYYMMDD')
+    let end = moment('20171231', 'YYYYMMDD')
+    let windowSize = "M"
+
+    //let targetAccounts = ["zahlungs", "checking", "spar"]
+    let targetCurrency = "chf"
+
+    let normalizedAcccounts = normaliseAccounts(accounts, start, end, prototypeAccount)
+
+    let normalisedContracts = normaliseContracts(testContract, contractProto)
+
+    let flows = genContractLine(normalisedContracts, start, end, windowSize) 
+    
+    console.log(JSON.stringify(flows, null, 2))
+
+    </script>
+</head>
+
+<body>
+    <div id="flows"> </div>
+</body>
+
+</html>

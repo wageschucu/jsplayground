@@ -359,6 +359,240 @@ const actuals = {
 }
 
 function 
+	contract,start,end,unit=>genFlows=>flows{day:{ amount, unit, account },...}
+	flows/actualFlows,rythm=>chunkFlows=>chunkedFlows{windows:{ amount, unit, accounts },...}
+
+	flows,account:{balances,unit,...}=>actualizeFlows=>actualFlows{day:{ amount, unit, account, balance, oldBalance,.. },...}
+
+	[flows/actualFlows],[accountNames],unit=>rollupFlows=>flows/actualFlows{window:{ amount, unit, account(s!), balance, oldBalance,... },...}
+
+
+	contract,start,end,unit,rythm=>genContractLine=>chunkFlows
+		genFlows
+		chunkFlows
+
+	[all-flows],accountName,unit=>genAccountLine=>flows{windows:{ amount, unit, accounts, balance },...}
+		rollupFlows
+		actualizeFlows		
+		chunkFlows
+
+	[flows/actualFlows],[*],unit=>genContractRollupLine=>flows
+		rollupFlows
+		chunkFlows
+
+	contracts,start,end => genAllContractLines => [all-chunkFlows],[all-flows]
+		walk-contracts
+
+	[accountNames],[all-flows]=> genAllAccountLines => [chunkFlows], Total-chunkedFlows
+		for accountNames
+
+
+
+
+
+
+
+
+
+
+
+---------------------		
+	// [accountNames],[all-flows]=> genAllAccountLines => [chunkFlows], Total-chunkedFlows
+	function genAllAccountLines(accountNames, allFlows, unit, rythm) {
+		// walk-contracts
+		let result={totalFlows : {}, allChunkedFlows:[]}
+		accountNames.forEach(accountName=>{
+			let balances = findPropOnObject("balances", findPropOnObject(accountName, accounts))
+			result.allChunkedFlows.push(genAccountLine(allFlows, balances, unit, rythm, accountName) )
+		})
+		return result
+	}
+
+	// contracts,start,end => genAllContractLines => [all-chunkFlows],[all-flows]
+	function genAllContractLines(normalizedContracts, start, end, rythm) {
+		// walk-contracts
+		let result={allFlows : [], allChunkedFlows:[]}
+		walkPojo(normalizedContracts, contract=>{
+			let result=genContractLine(contract, start, end, rythm)
+			result.allFlows.push(result.flows)
+			result.allChunkedFlows.push(result.chunkedFlows)
+		})
+		return result
+	}
+
+	// [all-flows],accountName,unit=>genAccountLine=>flows{windows:{ amount, unit, accounts, balance },...}
+	function genAccountLine(allFlows, balances, unit, rythm, accountName) {
+
+		let rolledUpFlows = rollupFlows(allFlows, [accountName], unit)
+		let actualFlows = actualizeFlows(rolledUpFlows, balances) 
+		let chunkedFlows = chunkFlows(actualFlows, rythm)
+		return chunkedFlows
+	}
+
+	function rollupFlows(allFlows, accountNames, unit) {
+	    let start =_.chain(flows).keys().head().value()
+	    let end = _.findLastKey(flows)
+		let rolledUpFlows = genFlows( start,end, null, "d")
+
+		allFlows.forEach(flows=>{
+			// filter out none listed accounts
+			let flow =_.chain(flows).head().value()
+			if (accountNames && accountNames.length && accountNames[0]!==undefined && (!flow || flow.account  || accountNames.indexOf(flow.account)!=-1 )
+				return 
+
+			rolledUpFlows.forEach((rollup,day)=>{
+				rolledUpFlows[day] = mergeFlow(rollup, flows[day], unit)
+			})
+		})
+		return rolledUpFlows
+	}
+
+	// contract,start,end,unit,rythm=>genContractLine=>chunkFlows
+	function genContractLine(normalizedContract,start,end,rythm) {
+		let result = {}
+		result.flows = genFlows( start,end, null, normalizedContract)
+		result.chunkedFlows = hunkedFlows(result.flows, rythm)
+		return result
+	}
+
+	// contract,start,end,unit=>genFlows=>flows{day:{ amount, unit, account },...}
+
+		function genFlows(start,end, rythm, normalizedContract) {
+		    let flows = {}
+		    if (normalizedContract && normalisedContract.start>start)
+		    	start = normalisedContract.start
+		    if (normalizedContract&&normalisedContract.end<end)
+		    	end = normalisedContract.end
+		    if (normalizedContract&& ! rythm)
+		    	rythm = normalisedContract.rythm
+
+		    let current = start
+		    let next;
+
+		    while (current <= end) {
+		        if (current >= first) {
+		            let flow = {}
+		            if (normalisedContract) { 
+		            	flow.amount=normalisedContract.amount
+		            	flow.unit=normalisedContract.unit
+		            	flow.account=normalisedContract.account
+		            }
+		            flows[current] = flow;
+		        }
+		        let oldcurrent=current
+		        next = moment(start, 'YYYYMMDD').add(1, rythm).format('YYYYMMDD')
+		        if (oldcurrent==current)
+		         {	// in case moment duration/rythm code is incorrect:moment returns same date
+		            throw "constant current date :"+current+" rythm: "+rythm            
+		         }
+		         current = next;
+		    }
+		    return flows
+		 }
+
+
+	// flows/actualFlows,rythm=>chunkFlows=>chunkedFlows{windows:{ amount, unit, accounts },...}
+		// create window and gather flows and merge them
+		function chunkedFlows(flows, rythm) {
+		{
+		    let start =_.chain(flows).keys().head().value()
+		    let last = _.findLastKey(flows)
+		    let chunkedFlows = {}
+
+		    let current = start
+		    let next; 
+
+		    // current and next: last-next-1-rythm
+		    
+		    while (current <= last) {
+		        next = moment(current, 'YYYYMMDD').add(1, rythm).format('YYYYMMDD')
+		        let nextminusone = moment(next, 'YYYYMMDD').add(-1, "d").format('YYYYMMDD')
+		        let chunkName = current+"-"+nextminusone+"-"+rythm
+
+		        chunkedFlows[chunkName] = gatherAndMergeFlows(current,nextminusone, flows)
+
+		        if (next==current)
+		        {
+		            throw "constant current date :"+current+" , rythm: "+rythm            
+		        }
+		        current = next 
+		    }
+		    return chunkedFlows
+		}
+
+		function gatherAndMergeFlows(start,last, flows) {
+			let chunk={flow:0}
+			let current = start
+		    while (current <= last) {
+		    	chunk=mergeFlow(chunk, flows[current])
+		        next = moment(current, 'YYYYMMDD').add(1, rythm).format('YYYYMMDD')
+		        current = next 
+		    }
+		    return chuck
+		}
+		// mergeFlow - flow,unit,account:lazy init unit,account,add flow
+		function mergeFlow(oldFlow, flow, unit)
+		{
+			let merged = {}
+			merged.unit = unit || oldFlow.unit || flow&&flow.unit
+			merged.account = oldFlow.account || flow&&flow.account
+			merged.amount = oldFlow.amount || 0
+			merged.balance = oldFlow.balance 
+			merged.oldBalance = oldFlow.oldBalance 
+
+			if (flow&&flow.amount)
+				merged.amount += convert(flow.amount, flow.unit, merged.unit) 
+
+			return merged
+		}
+
+		function convert(value, unit, targetUnit) {
+		    if (unit && unit!=targetUnit)
+		    {
+		        let factor = getConversionFactor(unit, units, targetUnit)
+		        value = value * factor 
+		        value = Math.round(value*100)/100
+		    }
+		    return value;
+		}
+
+		// flows,account:{balances,unit,...}=>actualizeFlows=>actualFlows{day:{ amount, unit, account, balance, oldBalance,.. },...}
+		function actualizeFlows(flows, balances) {
+			let balance=0
+		    _.reduce(sequence, (flows, flow, day)=>{ 
+		    	balance += flow.amount
+		    	flow.balance=balance
+		    	if (balances[day]) {
+		    		flow.oldBalance = flow.balance
+		    		flow.balance = balances[day]
+		    	}
+		    	return flows
+		    }, flows)
+
+			return flows
+		}
+
+	function findPropOnObject(prop, source) {
+	    for (var property in source) {
+	        let found=undefined
+	        if (prop == property) {
+	           found= source[property];
+	        } else if (typeof source[property] === "object" ) { 
+	            found=findPropOnObject(prop, source[property]);
+	        }
+	        if (found)
+	            return found
+	    }
+	    return undefined        
+	}
+
+---------------------		
+
+	flows,rythm=>chunk=>flows{windows:{ amount, unit, accounts, balance },...}
+
+	flows,accts:{balances, unit,...}=>actualize=>flows{day:{ amount, unit, accounts, balance },...}
+
+	flows,rythm=>chunk=>flows{day:{ amount, unit, accounts, balance },...}
 
    	function genFlows(start,end,contracts,accounts, units, contractProto) => { "20170208": {  unit:"chf", flow:-1.0, balance:1.0 } }
    	{
