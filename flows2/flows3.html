@@ -11,64 +11,76 @@
  -->
     <script type="text/javascript" src="moment-with-locales.js"></script>
     <script type="text/javascript" src="lodash.js"></script>
-    <script type="text/javascript" src="flows2.js"></script>
-    <script type="text/javascript" src="jquery-3.2.1.js"></script>
+<!--     <script type="text/javascript" src="flows2.js"></script>
+ -->    <script type="text/javascript" src="jquery-3.2.1.js"></script>
     <script type="text/javascript">
-
     // [accountNames],[all-flows]=> genAllAccountLines => [chunkFlows], Total-chunkedFlows
-    function genAllAccountLines(accountNames, allFlows, unit, rythm) {
+    function genAllAccountLines(normalizedAcccounts, allFlows,start, end,unit, rythm) {
         // walk-contracts
+        let accountNames = []
+        walkPojo(normalizedAcccounts, (account, name) => {
+            if (!isAcccount(account)) return 
+                accountNames.push(name)
+        })
+
         let result = { totalFlows: {}, allChunkedFlows: [] }
         accountNames.forEach(accountName => {
-            let balances = findPropOnObject("balances", findPropOnObject(accountName, accounts))
-            result.allChunkedFlows.push(genAccountLine(allFlows, balances, unit, rythm, accountName))
+            let balances = findPropOnObject("balances", findPropOnObject(accountName, normalizedAcccounts))
+            result.allChunkedFlows.push(genAccountLine(allFlows, start, end,balances, unit, rythm, accountName))
         })
         return result
     }
-
+    function isAcccount(account) {
+        return account && account.balances !== undefined  
+    }
+    function isContract(contract) {
+        return contract && contract.amount !== undefined  && contract.rythm !== undefined  
+    }
     // contracts,start,end => genAllContractLines => [all-chunkFlows],[all-flows]
     function genAllContractLines(normalizedContracts, start, end, rythm) {
         // walk-contracts
-        let result = { allFlows: [], allChunkedFlows: [] }
+        let allResults = { allFlows: [], allChunkedFlows: [] }
         walkPojo(normalizedContracts, contract => {
+            if (!isContract(contract)) return 
             let result = genContractLine(contract, start, end, rythm)
-            result.allFlows.push(result.flows)
-            result.allChunkedFlows.push(result.chunkedFlows)
+            allResults.allFlows.push(result.flows)
+            allResults.allChunkedFlows.push(result.chunkedFlows)
         })
-        return result
+        return allResults
     }
 
     // [all-flows],accountName,unit=>genAccountLine=>flows{windows:{ amount, unit, accounts, balance },...}
-    function genAccountLine(allFlows, balances, unit, rythm, accountName) {
+    function genAccountLine( allFlows, start, end,balances, unit, rythm, accountName) {
 
-        let rolledUpFlows = rollupFlows(allFlows, [accountName], unit)
+        let rolledUpFlows = rollupFlows(start, end, allFlows, [accountName], unit)
         let actualFlows = actualizeFlows(rolledUpFlows, balances)
-        let chunkedFlows = chunkFlows(actualFlows, rythm)
+        let chunkedFlows = chunkFlows(start, end, actualFlows, rythm)
         return chunkedFlows
     }
 
-    function rollupFlows(allFlows, accountNames, unit) {
-        let start = _.chain(flows).keys().head().value()
-        let end = _.findLastKey(flows)
-        let rolledUpFlows = genFlows(start, end, null, "d")
+    function rollupFlows(start, end, allFlows, accountNames, unit) {
+//        let start = _.chain(flows).keys().head().value()
+//        let end = _.findLastKey(flows)
+        let rolledUpFlows = genFlows(start, end, "d")
 
         allFlows.forEach(flows => {
             // filter out none listed accounts
-            let flow = _.chain(flows).head().value()
-            if (accountNames && accountNames.length && accountNames[0] !== undefined && (!flow || flow.account || accountNames.indexOf(flow.account) != -1))
+            let flow = _.chain(flows).values().head().value()
+            if (accountNames && accountNames.length && accountNames[0] !== undefined && !(flow && flow.account && accountNames.indexOf(flow.account) != -1))
                 return
-
-            rolledUpFlows.forEach((rollup, day) => {
+    
+            _.reduce(rolledUpFlows, (dummy, rollup, day) => {
                 rolledUpFlows[day] = mergeFlow(rollup, flows[day], unit)
             })
-        }) return rolledUpFlows
+        })
+        return rolledUpFlows
     }
 
     // contract,start,end,unit,rythm=>genContractLine=>chunkFlows
     function genContractLine(normalizedContract, start, end, rythm) {
         let result = {}
         result.flows = genFlows(start, end, null, normalizedContract)
-        result.chunkedFlows = hunkedFlows(result.flows, rythm)
+        result.chunkedFlows = chunkFlows(start, end, result.flows, rythm)
         return result
     }
 
@@ -76,29 +88,27 @@
 
     function genFlows(start, end, rythm, normalizedContract) {
         let flows = {}
-        if (normalizedContract && normalisedContract.start > start)
-            start = normalisedContract.start
-        if (normalizedContract && normalisedContract.end < end)
-            end = normalisedContract.end
+        if (normalizedContract && normalizedContract.start > start)
+            start = normalizedContract.start
+        if (normalizedContract && normalizedContract.end < end)
+            end = normalizedContract.end
         if (normalizedContract && !rythm)
-            rythm = normalisedContract.rythm
+            rythm = normalizedContract.rythm
 
         let current = start
         let next;
 
         while (current <= end) {
-            if (current >= first) {
-                let flow = {}
-                if (normalisedContract) {
-                    flow.amount = normalisedContract.amount
-                    flow.unit = normalisedContract.unit
-                    flow.account = normalisedContract.account
-                }
-                flows[current] = flow;
+            let flow = {}
+            if (normalizedContract) {
+                flow.amount = normalizedContract.amount
+                flow.unit = normalizedContract.unit
+                flow.account = normalizedContract.account
             }
-            let oldcurrent = current
-            next = moment(start, 'YYYYMMDD').add(1, rythm).format('YYYYMMDD')
-            if (oldcurrent == current) { // in case moment duration/rythm code is incorrect:moment returns same date
+            flows[current] = flow;
+
+            next = moment(current, 'YYYYMMDD').add(1, rythm).format('YYYYMMDD')
+            if (next == current) { // in case moment duration/rythm code is incorrect:moment returns same date
                 throw "constant current date :" + current + " rythm: " + rythm
             }
             current = next;
@@ -109,9 +119,9 @@
 
     // flows/actualFlows,rythm=>chunkFlows=>chunkedFlows{windows:{ amount, unit, accounts },...}
     // create window and gather flows and merge them
-    function chunkedFlows(flows, rythm) {
-        let start = _.chain(flows).keys().head().value()
-        let last = _.findLastKey(flows)
+    function chunkFlows(start, last, flows, rythm) {
+        //let start = _.chain(flows).keys().head().value()
+        //let last = _.findLastKey(flows)
         let chunkedFlows = {}
 
         let current = start
@@ -139,10 +149,10 @@
         let current = start
         while (current <= last) {
             chunk = mergeFlow(chunk, flows[current])
-            next = moment(current, 'YYYYMMDD').add(1, rythm).format('YYYYMMDD')
+            next = moment(current, 'YYYYMMDD').add(1, "d").format('YYYYMMDD')
             current = next
         }
-        return chuck
+        return chunk
     }
     // mergeFlow - flow,unit,account:lazy init unit,account,add flow
     function mergeFlow(oldFlow, flow, unit) {
@@ -150,31 +160,40 @@
         merged.unit = unit || oldFlow.unit || flow && flow.unit
         merged.account = oldFlow.account || flow && flow.account
         merged.amount = oldFlow.amount || 0
-        merged.balance = oldFlow.balance
-        merged.oldBalance = oldFlow.oldBalance
 
-        if (flow && flow.amount)
+        merged.balance = (flow && flow.balance) || oldFlow.balance
+        merged.oldBalance = (flow && flow.oldBalance) || oldFlow.oldBalance
+
+        if (flow && flow.amount) {
             merged.amount += convert(flow.amount, flow.unit, merged.unit)
+            merged.amount = Math.round(merged.amount * 100) / 100
+        }
 
         return merged
     }
 
     function convert(value, unit, targetUnit) {
         if (unit && unit != targetUnit) {
-            let factor = getConversionFactor(unit, units, targetUnit)
+            let factor = getConversionFactor(unit, targetUnit)
             value = value * factor
-            value = Math.round(value * 100) / 100
         }
         return value;
     }
 
+    function getConversionFactor(unit, targetUnit) {
+        if (units[unit][targetUnit])
+            return units[unit][targetUnit]
+        else
+            throw new Error("no conversion for : "+unit+" to "+targetUnit)
+    }
     // flows,account:{balances,unit,...}=>actualizeFlows=>actualFlows{day:{ amount, unit, account, balance, oldBalance,.. },...}
     function actualizeFlows(flows, balances) {
         let balance = 0
-        _.reduce(sequence, (flows, flow, day) => {
-            balance += flow.amount
+        _.reduce(flows, (flows, flow, day) => {
+            if (flow.amount !== undefined)
+                balance += flow.amount
             flow.balance = balance
-            if (balances[day]) {
+            if (balances[day]!==undefined) {
                 flow.oldBalance = flow.balance
                 flow.balance = balances[day]
             }
@@ -249,6 +268,76 @@
         walkPojo(normalizedAcccounts, bringFowardOldBalance)
         return normalizedAcccounts
     }
+    // deep copy of undefined attributes
+    function inherit(source, parent, prototype, deep) {
+        // filter parent 
+        let target = {}
+
+        // copy source props
+        //   if prop in prototype: deep copy/clone 
+        for (var prop in source) {
+            if (prototype[prop] !== undefined) {
+                if (typeof source[prop] == "object") {
+                    target[prop] = clone(source[prop], true)
+                } else {
+                    target[prop] = source[prop]
+                }
+            }
+        }
+
+        // inheit from parent
+        for (var prop in parent) {
+            if (prototype[prop] === null && target[prop] === undefined && parent[prop] !== undefined) {
+                target[prop] = parent[prop]
+                if (prototype.inherited) {
+                    target.inherited = target.inherited || []
+                    target.inherited.push(prop)
+                }
+            }
+        }
+
+        for (var prop in source) {
+            if (prototype[prop] === undefined && typeof source[prop] == "object") {
+                if (deep)
+                    target[prop] = inherit(source[prop], target, prototype, deep)
+                else
+                    target[prop] = source[prop]
+            }
+        }
+
+        return target
+    }
+
+    // deep copy, but not overwriting dest leaves
+    function clone(source, deep) {
+        let destination = {}
+        for (var property in source) {
+            if (typeof source[property] === "object" && deep) {
+                destination[property] = {}
+                clone(source[property], destination[property]);
+            } else {
+                destination[property] = source[property];
+            }
+        }
+        return destination
+    }
+
+    function walkPojo(source, iterator, key, level, path)
+    {
+        if (level===undefined)
+            level = 0
+        if (path===undefined)
+            path = ""
+        iterator(source, key, level, path)
+        if (key===undefined)
+            key = ""
+        for (var property in source) {
+            if (typeof source[property] === "object") { 
+                walkPojo(source[property], iterator, property, level+1, path+"."+key)   
+            }
+        } 
+
+    }
 
     Set.prototype.toJSON = function toJSON() {
         return [...Set.prototype.values.call(this)];
@@ -259,7 +348,7 @@
         duration: null,
         end: null,
         amount: null,
-        acct: null,
+        account: null,
         rythm: null,
         flows: [],
         unit: null,
@@ -313,7 +402,7 @@
     // seconds  s
     // milliseconds ms
     let testContract = {
-        acct: "zahlungs",
+        account: "zahlungs",
         unit: "chf",
         rythm: "M",
         start: "20170104",
@@ -347,16 +436,16 @@
             unit: "eur"
         },
         income2: {
-            acct: "checking",
+            account: "checking",
             start: "201701end",
             amount: -300,
             unit: "usd"
         },
     }
 
-    let start = moment('20170101', 'YYYYMMDD')
-    let end = moment('20171231', 'YYYYMMDD')
-    let windowSize = "M"
+    let start = '20170101'
+    let end = '20171231'
+        let windowSize = "M"
 
     //let targetAccounts = ["zahlungs", "checking", "spar"]
     let targetCurrency = "chf"
@@ -365,10 +454,16 @@
 
     let normalisedContracts = normaliseContracts(testContract, contractProto)
 
-    let flows = genContractLine(normalisedContracts, start, end, windowSize) 
-    
-    console.log(JSON.stringify(flows, null, 2))
+    let flows = genAllContractLines(normalisedContracts, start, end, windowSize)
 
+    let acctflows = genAccountLine(flows.allFlows, start, end, normalizedAcccounts.post.zahlungs.balances, "chf", windowSize, "zahlungs")
+
+    let allAcctflows = genAllAccountLines(normalizedAcccounts, flows.allFlows,start, end,"chf", windowSize) 
+
+    console.log(JSON.stringify(allAcctflows, null, 2))
+
+    // gen all contracts: if dates or rythm change
+    // gen all accounts: if above or unit change
     </script>
 </head>
 
