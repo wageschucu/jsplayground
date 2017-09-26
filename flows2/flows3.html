@@ -363,25 +363,38 @@
     const accounts = {
         post: {
             unit: "chf",
-            zahlungs: {
-                balances: { '20170104': 1000, '20171231': 600, },
+            zahlungs: { balances: { 
+                    '20170104': 1000, 
+                    '20171231': 600, 
+                },
+                // transfer??
+                //spar: { start: 20170101, rythm: "M",  amount: 1000 },
             },
-            spar: {
-                start: 20170101,
-                rythm: "M",
-                amount: 1000
-            },
-            usd: { unit: "usd", balances: { '20170101': 100 } },
-            eur: { unit: "eur", balances: { '20170101': 10 } },
-            spar: {},
-            "3a": {}
+            
+            usd: { unit: "usd", balances: { 
+                '20170101': 100 ,
+            } },
+            eur: { unit: "eur", balances: { 
+                '20170101': 10,
+                 } },
+            spar: { balances: { 
+                '20170101': 100 ,
+                }},
+            "3a": { balances: { 
+                '20170101': 100 ,
+            }}
         },
         tnb: {
             unit: "usd",
             checking: {
-                balances: { '20170101': 2000 }
+                balances: { 
+                    '20170101': 2000,
+                     }
             },
-            savings: {}
+            savings: {
+                balances: { 
+                    '20170101': 2000,
+                     }}
         }
     }
 
