@@ -15,20 +15,24 @@
  -->    <script type="text/javascript" src="jquery-3.2.1.js"></script>
     <script type="text/javascript">
     // [accountNames],[all-flows]=> genAllAccountLines => [chunkFlows], Total-chunkedFlows
-    function genAllAccountLines(normalizedAcccounts, allFlows,start, end,unit, rythm) {
+    function genAllAccountLines(accountNames, normalizedAcccounts, allFlows,start, end,unit, rythm) {
         // walk-contracts
+        let result = { totalFlows: {}, allChunkedFlows: [] , paths : []}
+        accountNames.forEach(accountName => {
+            let balances = findPropOnObject("balances", findPropOnObject(accountName, normalizedAcccounts))
+            result.allChunkedFlows.push(genAccountLine(allFlows, start, end,balances, unit, rythm, accountName))
+            result.paths.push(accountName)
+
+        })
+        return result
+    }
+    function getAllAccountNames(normalizedAcccounts) {
         let accountNames = []
         walkPojo(normalizedAcccounts, (account, name) => {
             if (!isAcccount(account)) return 
                 accountNames.push(name)
         })
-
-        let result = { totalFlows: {}, allChunkedFlows: [] }
-        accountNames.forEach(accountName => {
-            let balances = findPropOnObject("balances", findPropOnObject(accountName, normalizedAcccounts))
-            result.allChunkedFlows.push(genAccountLine(allFlows, start, end,balances, unit, rythm, accountName))
-        })
-        return result
+        return accountNames
     }
     function isAcccount(account) {
         return account && account.balances !== undefined  
@@ -39,12 +43,14 @@
     // contracts,start,end => genAllContractLines => [all-chunkFlows],[all-flows]
     function genAllContractLines(normalizedContracts, start, end, rythm) {
         // walk-contracts
-        let allResults = { allFlows: [], allChunkedFlows: [] }
-        walkPojo(normalizedContracts, contract => {
+        let allResults = { allFlows: [], allChunkedFlows: [], paths : [], contracts : [] }
+        walkPojo(normalizedContracts, (contract, key, level, path) => {
             if (!isContract(contract)) return 
             let result = genContractLine(contract, start, end, rythm)
             allResults.allFlows.push(result.flows)
             allResults.allChunkedFlows.push(result.chunkedFlows)
+            // rollup for each account, if there is subs 
+            allResults.contracts.push(contract)
         })
         return allResults
     }
@@ -327,13 +333,14 @@
         if (level===undefined)
             level = 0
         if (path===undefined)
-            path = ""
+            path = "."
         iterator(source, key, level, path)
-        if (key===undefined)
-            key = ""
+        let subPath = path
+        if (key)
+            subPath += key+"."
         for (var property in source) {
             if (typeof source[property] === "object") { 
-                walkPojo(source[property], iterator, property, level+1, path+"."+key)   
+                walkPojo(source[property], iterator, property, level+1, subPath)   
             }
         } 
 
@@ -469,14 +476,16 @@
 
     let flows = genAllContractLines(normalisedContracts, start, end, windowSize)
 
-    let acctflows = genAccountLine(flows.allFlows, start, end, normalizedAcccounts.post.zahlungs.balances, "chf", windowSize, "zahlungs")
+    let acctflows = genAccountLine(flows.allFlows, start, end, normalizedAcccounts.post.zahlungs.balances, targetCurrency, windowSize, "zahlungs")
 
-    let allAcctflows = genAllAccountLines(normalizedAcccounts, flows.allFlows,start, end,"chf", windowSize) 
+    let allAccountNames = getAllAccountNames(normalizedAcccounts)
+    let allAcctflows = genAllAccountLines(allAccountNames, normalizedAcccounts, flows.allFlows,start, end,targetCurrency, windowSize) 
 
     console.log(JSON.stringify(allAcctflows, null, 2))
 
     // gen all contracts: if dates or rythm change
     // gen all accounts: if above or unit change
+    // refresh/redraw, generate, loop contracts 
     </script>
 </head>
 
