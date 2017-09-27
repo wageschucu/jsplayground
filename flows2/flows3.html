@@ -11,54 +11,59 @@
  -->
     <script type="text/javascript" src="moment-with-locales.js"></script>
     <script type="text/javascript" src="lodash.js"></script>
-<!--     <script type="text/javascript" src="flows2.js"></script>
- -->    <script type="text/javascript" src="jquery-3.2.1.js"></script>
+    <!--     <script type="text/javascript" src="flows2.js"></script>
+ -->
+    <script type="text/javascript" src="jquery-3.2.1.js"></script>
     <script type="text/javascript">
     // [accountNames],[all-flows]=> genAllAccountLines => [chunkFlows], Total-chunkedFlows
-    function genAllAccountLines(accountNames, normalizedAcccounts, allFlows,start, end,unit, rythm) {
+    function genAllAccountLines(accountNames, normalizedAcccounts, allFlows, start, end, unit, rythm) {
         // walk-contracts
-        let result = { totalFlows: {}, allChunkedFlows: [] , paths : []}
+        let result = { totalFlows: {}, allChunkedFlows: [], paths: [], accounts:[] }
         accountNames.forEach(accountName => {
             let balances = findPropOnObject("balances", findPropOnObject(accountName, normalizedAcccounts))
-            result.allChunkedFlows.push(genAccountLine(allFlows, start, end,balances, unit, rythm, accountName))
+            result.allChunkedFlows.push(genAccountLine(allFlows, start, end, balances, unit, rythm, accountName))
             result.paths.push(accountName)
+            result.accounts.push(findPropOnObject(accountName, normalizedAcccounts))
 
         })
         return result
     }
+
     function getAllAccountNames(normalizedAcccounts) {
         let accountNames = []
         walkPojo(normalizedAcccounts, (account, name) => {
-            if (!isAcccount(account)) return 
-                accountNames.push(name)
+            if (!isAcccount(account)) return
+            accountNames.push(name)
         })
         return accountNames
     }
+
     function isAcccount(account) {
-        return account && account.balances !== undefined  
+        return account && account.balances !== undefined
     }
+
     function isContract(contract) {
-        return contract && contract.amount !== undefined  && contract.rythm !== undefined  
+        return contract && contract.amount !== undefined && contract.rythm !== undefined
     }
     // contracts,start,end => genAllContractLines => [all-chunkFlows],[all-flows]
     function genAllContractLines(normalizedContracts, start, end, rythm) {
         // walk-contracts
-        let allResults = { allFlows: [], allChunkedFlows: [],allChunkedRowupFlows: [], paths : [], contracts : [] }
+        let allResults = { allFlows: [], allChunkedFlows: [], allChunkedRowupFlows: [], paths: [], contracts: [] }
         walkPojo(normalizedContracts, (contract, key, level, path) => {
-            if (!isContract(contract)) return 
+            if (!isContract(contract)) return
             let result = genContractLine(contract, start, end, rythm)
             allResults.allFlows.push(result.flows)
             allResults.allChunkedFlows.push(result.chunkedFlows)
             allResults.allChunkedRowupFlows.push(result.chunkedRollupFlows)
             // rollup for each account, if there is subs 
             allResults.contracts.push(contract)
-            allResults.paths.push(path+(key?key:""))
+            allResults.paths.push(path + (key ? key : ""))
         })
         return allResults
     }
 
     // [all-flows],accountName,unit=>genAccountLine=>flows{windows:{ amount, unit, accounts, balance },...}
-    function genAccountLine( allFlows, start, end,balances, unit, rythm, accountName) {
+    function genAccountLine(allFlows, start, end, balances, unit, rythm, accountName) {
 
         let rolledUpFlows = genRollupFlows(start, end, allFlows, [accountName], unit)
         let actualFlows = actualizeFlows(rolledUpFlows, balances)
@@ -67,8 +72,8 @@
     }
 
     function genRollupFlows(start, end, allFlows, accountNames, unit) {
-//        let start = _.chain(flows).keys().head().value()
-//        let end = _.findLastKey(flows)
+        //        let start = _.chain(flows).keys().head().value()
+        //        let end = _.findLastKey(flows)
         let rolledUpFlows = genFlows(start, end, "d")
 
         allFlows.forEach(flows => {
@@ -76,7 +81,7 @@
             let flow = _.chain(flows).values().head().value()
             if (accountNames && accountNames.length && accountNames[0] !== undefined && !(flow && flow.account && accountNames.indexOf(flow.account) != -1))
                 return
-    
+
             _.reduce(rolledUpFlows, (dummy, rollup, day) => {
                 rolledUpFlows[day] = mergeFlow(rollup, flows[day], unit)
             })
@@ -92,7 +97,7 @@
 
         // fetch all from this contract down: flag when there are not sub contracts:?some null value 
         let allFlows = getAllFlows(normalizedContract, start, end)
-        let rollupFlows = genRollupFlows(start, end,  allFlows, null, normalizedContract.unit)
+        let rollupFlows = genRollupFlows(start, end, allFlows, null, normalizedContract.unit)
         result.chunkedRollupFlows = chunkFlows(start, end, rollupFlows, rythm)
         return result
     }
@@ -105,9 +110,9 @@
 
     function getAllFlows(normalizedContracts, start, end) {
         // walk-contracts
-        let allFlows = [] 
+        let allFlows = []
         walkPojo(normalizedContracts, (contract, key, level, path) => {
-            if (!isContract(contract)) return 
+            if (!isContract(contract)) return
             let flows = genContractLineAndSubs(contract, start, end)
             allFlows.push(flows)
         })
@@ -176,6 +181,8 @@
 
     function gatherAndMergeFlows(start, last, flows) {
         let chunk = { flow: 0 }
+        if (!flows) return chunk;
+
         let current = start
         while (current <= last) {
             chunk = mergeFlow(chunk, flows[current])
@@ -189,25 +196,25 @@
         let merged = {}
         merged.unit = unit || oldFlow.unit || flow && flow.unit
         // if diff to array
-        if ((oldFlow && oldFlow.account && Array.isArray(oldFlow.account)) || (flow && flow.account && Array.isArray(flow.account))  || (flow && oldFlow && oldFlow.account && flow.account && oldFlow.account != flow.account  ) ) {
-            merged.account = []    
+        if ((oldFlow && oldFlow.account && Array.isArray(oldFlow.account)) || (flow && flow.account && Array.isArray(flow.account)) || (flow && oldFlow && oldFlow.account && flow.account && oldFlow.account != flow.account)) {
+            merged.account = []
             if (oldFlow && oldFlow.account && Array.isArray(oldFlow.account))
-                merged.account= [...new Set([...merged.account, ...oldFlow.account])];
-            else if (oldFlow.account )
+                merged.account = [...new Set([...merged.account, ...oldFlow.account])];
+            else if (oldFlow.account)
                 merged.account.push(oldFlow.account)
 
             if (flow && flow.account && Array.isArray(flow.account))
-                merged.account= [...new Set([...merged.account, ...flow.account])];
-            else if (flow.account )
+                merged.account = [...new Set([...merged.account, ...flow.account])];
+            else if (flow.account)
                 merged.account.push(flow.account)
 
-        }
-        else {
+        } else {
             merged.account = oldFlow.account || flow && flow.account
         }
-         merged.amount = oldFlow.amount || 0
+        merged.amount = oldFlow.amount || 0
 
         merged.balance = (flow && flow.balance) || oldFlow.balance
+        merged.balance = Math.round(merged.balance * 100) / 100
         merged.oldBalance = (flow && flow.oldBalance) || oldFlow.oldBalance
 
         if (flow && flow.amount) {
@@ -230,7 +237,7 @@
         if (units[unit][targetUnit])
             return units[unit][targetUnit]
         else
-            throw new Error("no conversion for : "+unit+" to "+targetUnit)
+            throw new Error("no conversion for : " + unit + " to " + targetUnit)
     }
     // flows,account:{balances,unit,...}=>actualizeFlows=>actualFlows{day:{ amount, unit, account, balance, oldBalance,.. },...}
     function actualizeFlows(flows, balances) {
@@ -239,7 +246,7 @@
             if (flow.amount !== undefined)
                 balance += flow.amount
             flow.balance = balance
-            if (balances[day]!==undefined) {
+            if (balances[day] !== undefined) {
                 flow.oldBalance = flow.balance
                 flow.balance = balances[day]
             }
@@ -368,21 +375,20 @@
         return destination
     }
 
-    function walkPojo(source, iterator, key, level, path)
-    {
-        if (level===undefined)
+    function walkPojo(source, iterator, key, level, path) {
+        if (level === undefined)
             level = 0
-        if (path===undefined)
+        if (path === undefined)
             path = "."
         iterator(source, key, level, path)
         let subPath = path
         if (key)
-            subPath += key+"."
+            subPath += key + "."
         for (var property in source) {
-            if (typeof source[property] === "object") { 
-                walkPojo(source[property], iterator, property, level+1, subPath)   
+            if (typeof source[property] === "object") {
+                walkPojo(source[property], iterator, property, level + 1, subPath)
             }
-        } 
+        }
 
     }
 
@@ -406,42 +412,55 @@
         balances: [],
         inherited: []
     }
-
+    </script>
+    <script type="text/javascript">
     const accounts = {
         post: {
             unit: "chf",
-            zahlungs: { balances: { 
-                    '20170104': 1000, 
-                    '20171231': 600, 
+            zahlungs: {
+                balances: {
+                    '20170104': 1000,
+                    '20171231': 600,
                 },
                 // transfer??
                 //spar: { start: 20170101, rythm: "M",  amount: 1000 },
             },
-            
-            usd: { unit: "usd", balances: { 
-                '20170101': 100 ,
-            } },
-            eur: { unit: "eur", balances: { 
-                '20170101': 10,
-                 } },
-            spar: { balances: { 
-                '20170101': 100 ,
-                }},
-            "3a": { balances: { 
-                '20170101': 100 ,
-            }}
+
+            usd: {
+                unit: "usd",
+                balances: {
+                    '20170101': 100,
+                }
+            },
+            eur: {
+                unit: "eur",
+                balances: {
+                    '20170101': 10,
+                }
+            },
+            spar: {
+                balances: {
+                    '20170101': 100,
+                }
+            },
+            "3a": {
+                balances: {
+                    '20170101': 100,
+                }
+            }
         },
         tnb: {
             unit: "usd",
             checking: {
-                balances: { 
+                balances: {
                     '20170101': 2000,
-                     }
+                }
             },
             savings: {
-                balances: { 
+                balances: {
                     '20170101': 2000,
-                     }}
+                }
+            }
         }
     }
 
@@ -505,7 +524,7 @@
 
     let start = '20170101'
     let end = '20171231'
-        let windowSize = "M"
+    let windowSize = "Q"
 
     //let targetAccounts = ["zahlungs", "checking", "spar"]
     let targetCurrency = "chf"
@@ -514,20 +533,222 @@
 
     let normalisedContracts = normaliseContracts(testContract, contractProto)
 
-    let flows = genAllContractLines(normalisedContracts, start, end, windowSize)
 
-    let acctflows = genAccountLine(flows.allFlows, start, end, normalizedAcccounts.post.zahlungs.balances, targetCurrency, windowSize, "zahlungs")
-
-    let allAccountNames = getAllAccountNames(normalizedAcccounts)
-    let allAcctflows = genAllAccountLines(allAccountNames, normalizedAcccounts, flows.allFlows,start, end,targetCurrency, windowSize) 
-
-    console.log(JSON.stringify(allAcctflows, null, 2))
+    // console.log(JSON.stringify(allAcctflows, null, 2))
 
     // gen all contracts: if dates or rythm change
     // gen all accounts: if above or unit change
     // refresh/redraw, generate, loop contracts, expand logic, css, 
     // budget examples, mine, a house?, retirement 
-    
+    function refreshWindows() {
+
+        let allFlows = genAllContractLines(normalisedContracts, start, end, windowSize)
+        let allAccountNames = getAllAccountNames(normalizedAcccounts)
+        let allAcctflows = genAllAccountLines(allAccountNames, normalizedAcccounts, allFlows.allFlows, start, end, targetCurrency, windowSize)
+
+        let $tableEnd = createTable( chunkFlows(start, end, null, windowSize));
+
+        {
+            allFlows.allFlows.forEach((flows, index)=>{
+                appendRow($tableEnd, allFlows.contracts[index], allFlows.allChunkedFlows[index], allFlows.paths[index], allFlows.paths[index].split(".").length, allFlows.paths[index])
+
+            })
+
+        }
+
+        {
+            allAcctflows.accounts.forEach((flows, index)=>{
+ 
+                appendFooter($tableEnd, allAcctflows.accounts[index], allAcctflows.allChunkedFlows[index], allAcctflows.paths[index])
+
+            })
+
+        }
+
+        appendFooter($tableEnd,{unit:targetCurrency}, genAccountLine(allFlows.allFlows, start, end, {}, targetCurrency, windowSize) , "Totals")
+
+        
+
+
+        // appendFooter($tableEnd, { unit: targetCurrency }, windowedFlows, "Totals")
+
+        function listAccounts(targetAccount, targetAccountName) {
+            if (!targetAccount.balances)
+                return
+            // total each account
+            let mergedFlows = getMergedFlowsAllAccounts(days, normalisedContracts, normalizedAcccounts, [targetAccountName], units, contractProto, targetCurrency)
+
+            let windowedFlows = mergeToWindow(mergedFlows, windowSize)
+
+            console.log(JSON.stringify(windowedFlows, null, 2))
+            appendFooter($tableEnd, targetAccount, windowedFlows, targetAccountName)
+        }
+        // walk contracts
+
+        function createTable(windowedSeq) {
+            $('#flows').empty();
+
+            $('<div>').text("window:").append($input = $('<input>').val(windowSize).on('blur', (e) => {
+                    windowSize = e.target.value;
+                    refreshWindows()
+                }))
+                .appendTo($('#flows'))
+
+            $('<div>').text("start:").append($input = $('<input>').val(start).on('blur', (e) => {
+                    start = moment(e.target.value, 'YYYYMMDD');
+                    refreshWindows()
+                }))
+                .appendTo($('#flows'))
+
+            $('<div>').text("end:").append($input = $('<input>').val(end).on('blur', (e) => {
+                    end = moment(e.target.value, 'YYYYMMDD');
+                    refreshWindows()
+                }))
+                .appendTo($('#flows'))
+
+            // $('<div>').text("targetAccounts:"+targetAccounts)
+            //         .appendTo($('#flows'))
+
+            $('<div>').text("targetCurrency:").append($('<input>').val(targetCurrency).on('blur', (e) => {
+                    targetCurrency = e.target.value;
+                    refreshWindows()
+                }))
+                .appendTo($('#flows'))
+
+            let $table = $('<table>')
+            $table.css("border", "1px solid #000");
+            let $header = $('<tr>').appendTo(
+                $table
+                .appendTo($('#flows'))
+            )
+
+            $header
+                .append($('<td>').text("+-"))
+                .append($('<td>').text("name")
+                    .css("border", "1px solid #000"));
+
+            _.each(contractProto, (value, prop) => {
+                if (value == null)
+                    $header.append($('<td>').text(prop)
+                        .css("border", "1px solid #000"));
+
+            })
+            _.each(windowedSeq, (wind, day) => {
+                $header.append($('<td>').text(day.split('-')[0])
+                    .css("border", "1px solid #000"));
+            })
+
+            return $table
+        }
+
+        function appendRow($appendPoint, targetContract, windowedFlows, contractName, level, path) {
+
+            function toggleShow(e) {
+                let $tr = $(this)
+                let parentPath = $tr.data("path")
+                $('tr').each((index, tr) => {
+                    let $tr = $(tr)
+                    let myPath = $tr.data("path")
+                    if (myPath && myPath.startsWith(parentPath + ".")) {
+                        $tr.show()
+                    }
+                })
+                $tr
+                    .off("click", toggleShow)
+                    .on("click", toggleHide)
+
+            }
+
+            function toggleHide(e) {
+                let $tr = $(this)
+                let parentPath = $tr.data("path")
+                $('tr').each((index, tr) => {
+                    let $tr = $(tr)
+                    let myPath = $tr.data("path")
+                    if (myPath && myPath.startsWith(parentPath + ".")) {
+                        $tr.hide()
+                    }
+                })
+                $tr
+                    .off("click", toggleHide)
+                    .on("click", toggleShow)
+
+            }
+
+            let $tr = $('<tr>')
+                .data("path", path + "." + (contractName ? contractName : ""))
+                .appendTo($appendPoint)
+                .on("click", toggleHide)
+
+            $tr.append(
+                $('<td>')
+                .text('-')
+                .addClass('plusminus')
+            )
+
+            $tr.append($('<td>')
+                .text((contractName ? contractName : ""))
+                .css("padding-left", ' ' + (level * 10) + "px")
+                .css("border", "1px solid #000")
+            );
+
+            _.each(contractProto, (value, prop) => {
+                if (value == null) {
+                    let $td;
+                    $tr.append($td = $('<td>').text(targetContract[prop])
+                        .css("border", "1px solid #000")
+                        .css("padding-left", ' ' + (level * 10) + "px")
+                    );
+                    if (targetContract && targetContract.inherited && targetContract.inherited.indexOf(prop) != -1) {
+                        $td.css("background-color", "lightgrey")
+                    }
+                }
+            })
+
+            _.each(windowedFlows, (wind, day) => {
+                $tr.append($('<td>').text(wind.amount)
+                    .css("border", "1px solid #000")
+                    .css("padding-left", ' ' + (level * 10) + "px")
+                );
+            })
+
+        }
+
+        function appendFooter($appendPoint, targetContract, windowedFlows, contractName) {
+
+            let $tr = $('<tr>').appendTo($appendPoint).css("background-color", "lightgrey")
+
+            $tr.append($('<td>').text(''))
+            $tr.append($('<td>').text(contractName)
+                .css("border", "1px solid #000"));
+            _.each(contractProto, (value, prop) => {
+                if (value == null)
+                    $tr.append($('<td>').text(targetContract[prop])
+                        .css("border", "1px solid #000"));
+
+            })
+
+            _.each(windowedFlows, (wind, day) => {
+                let $td;
+                $tr.append(
+                    $('<td>')
+                    .append($('<span>').text(wind.amount))
+                    .append($('<br>'))
+                    .append($bal = $('<span>').text(" (" + (wind.balance?wind.balance :'0') + ")"))
+                    .css("border", "1px solid #000")
+                );
+
+                if (wind.oldBalance !== undefined) {
+                    $bal.css("color", "black")
+                    $bal.css("font-weight", "bold")
+                }
+            })
+
+        }
+
+    }
+
+    $(refreshWindows)
     </script>
 </head>
 
