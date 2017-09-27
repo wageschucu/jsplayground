@@ -640,7 +640,7 @@
                 let targetPath = $tr.data("path")
                 let targetLevel = $tr.data("level")
                 let targetIsDetail = $tr.hasClass("detail")
-                let targetAggregateCount = $tr.hasClass("aggregateCount")
+                let targetAggregateCount = $tr.data("aggregateCount")
                 $('tr').each((index, tr) => {
                     let $tr = $(tr)
                     let myPath = $tr.data("path")
@@ -650,7 +650,7 @@
                     if (myPath && myPath.startsWith(targetPath)) {
                         if (targetIsDetail) {
                             // if aggregate: collapse
-                            if (myAggregateCount>1) {
+                            if (targetAggregateCount>1) {
                                 if  (myLevel==targetLevel && !myIsDetail)
                                     $tr.show() 
                                 else if (myLevel>targetLevel) 
@@ -688,11 +688,6 @@
                     }
                 })
 
-                if (parentIsDetail) {
-
-                } else {
-                    $tr.hide();
-                }
                 // $tr
                 //     .off("click", toggleHide)
                 //     .on("click", toggleShow)
@@ -713,6 +708,9 @@
                 if (cssClass=='detail') {
                     if (aggregateCount>1)
                         symbol= "-"
+                    else 
+                        symbol= ""
+                        
                 } else {
 
                 }
