@@ -43,14 +43,16 @@
     // contracts,start,end => genAllContractLines => [all-chunkFlows],[all-flows]
     function genAllContractLines(normalizedContracts, start, end, rythm) {
         // walk-contracts
-        let allResults = { allFlows: [], allChunkedFlows: [], paths : [], contracts : [] }
+        let allResults = { allFlows: [], allChunkedFlows: [],allChunkedRowupFlows: [], paths : [], contracts : [] }
         walkPojo(normalizedContracts, (contract, key, level, path) => {
             if (!isContract(contract)) return 
             let result = genContractLine(contract, start, end, rythm)
             allResults.allFlows.push(result.flows)
             allResults.allChunkedFlows.push(result.chunkedFlows)
+            allResults.allChunkedRowupFlows.push(result.chunkedRollupFlows)
             // rollup for each account, if there is subs 
             allResults.contracts.push(contract)
+            allResults.paths.push(path+(key?key:""))
         })
         return allResults
     }
@@ -58,13 +60,13 @@
     // [all-flows],accountName,unit=>genAccountLine=>flows{windows:{ amount, unit, accounts, balance },...}
     function genAccountLine( allFlows, start, end,balances, unit, rythm, accountName) {
 
-        let rolledUpFlows = rollupFlows(start, end, allFlows, [accountName], unit)
+        let rolledUpFlows = genRollupFlows(start, end, allFlows, [accountName], unit)
         let actualFlows = actualizeFlows(rolledUpFlows, balances)
         let chunkedFlows = chunkFlows(start, end, actualFlows, rythm)
         return chunkedFlows
     }
 
-    function rollupFlows(start, end, allFlows, accountNames, unit) {
+    function genRollupFlows(start, end, allFlows, accountNames, unit) {
 //        let start = _.chain(flows).keys().head().value()
 //        let end = _.findLastKey(flows)
         let rolledUpFlows = genFlows(start, end, "d")
@@ -87,7 +89,29 @@
         let result = {}
         result.flows = genFlows(start, end, null, normalizedContract)
         result.chunkedFlows = chunkFlows(start, end, result.flows, rythm)
+
+        // fetch all from this contract down: flag when there are not sub contracts:?some null value 
+        let allFlows = getAllFlows(normalizedContract, start, end)
+        let rollupFlows = genRollupFlows(start, end,  allFlows, null, normalizedContract.unit)
+        result.chunkedRollupFlows = chunkFlows(start, end, rollupFlows, rythm)
         return result
+    }
+
+    // contract,start,end,unit,rythm=>genContractLine=>chunkFlows
+    function genContractLineAndSubs(normalizedContract, start, end) {
+        let flows = genFlows(start, end, null, normalizedContract)
+        return flows
+    }
+
+    function getAllFlows(normalizedContracts, start, end) {
+        // walk-contracts
+        let allFlows = [] 
+        walkPojo(normalizedContracts, (contract, key, level, path) => {
+            if (!isContract(contract)) return 
+            let flows = genContractLineAndSubs(contract, start, end)
+            allFlows.push(flows)
+        })
+        return allFlows
     }
 
     // contract,start,end,unit=>genFlows=>flows{day:{ amount, unit, account },...}
@@ -164,8 +188,24 @@
     function mergeFlow(oldFlow, flow, unit) {
         let merged = {}
         merged.unit = unit || oldFlow.unit || flow && flow.unit
-        merged.account = oldFlow.account || flow && flow.account
-        merged.amount = oldFlow.amount || 0
+        // if diff to array
+        if ((oldFlow && oldFlow.account && Array.isArray(oldFlow.account)) || (flow && flow.account && Array.isArray(flow.account))  || (flow && oldFlow && oldFlow.account && flow.account && oldFlow.account != flow.account  ) ) {
+            merged.account = []    
+            if (oldFlow && oldFlow.account && Array.isArray(oldFlow.account))
+                merged.account= [...new Set([...merged.account, ...oldFlow.account])];
+            else if (oldFlow.account )
+                merged.account.push(oldFlow.account)
+
+            if (flow && flow.account && Array.isArray(flow.account))
+                merged.account= [...new Set([...merged.account, ...flow.account])];
+            else if (flow.account )
+                merged.account.push(flow.account)
+
+        }
+        else {
+            merged.account = oldFlow.account || flow && flow.account
+        }
+         merged.amount = oldFlow.amount || 0
 
         merged.balance = (flow && flow.balance) || oldFlow.balance
         merged.oldBalance = (flow && flow.oldBalance) || oldFlow.oldBalance
@@ -485,7 +525,9 @@
 
     // gen all contracts: if dates or rythm change
     // gen all accounts: if above or unit change
-    // refresh/redraw, generate, loop contracts 
+    // refresh/redraw, generate, loop contracts, expand logic, css, 
+    // budget examples, mine, a house?, retirement 
+    
     </script>
 </head>
 
