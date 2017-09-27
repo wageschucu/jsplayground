@@ -43,7 +43,7 @@
     }
 
     function isContract(contract) {
-        return contract && contract.amount !== undefined && contract.rythm !== undefined
+        return contract && contract.amount !== undefined && contract.start !== undefined
     }
     // contracts,start,end => genAllContractLines => [all-chunkFlows],[all-flows]
     function genAllContractLines(normalizedContracts, start, end, rythm) {
@@ -414,6 +414,7 @@
     }
     </script>
     <script type="text/javascript">
+    var allflowsg;
     const accounts = {
         post: {
             unit: "chf",
@@ -543,6 +544,7 @@
     function refreshWindows() {
 
         let allFlows = genAllContractLines(normalisedContracts, start, end, windowSize)
+        allflowsg = allFlows
         let allAccountNames = getAllAccountNames(normalizedAcccounts)
         let allAcctflows = genAllAccountLines(allAccountNames, normalizedAcccounts, allFlows.allFlows, start, end, targetCurrency, windowSize)
 
@@ -550,8 +552,14 @@
 
         {
             allFlows.allFlows.forEach((flows, index)=>{
-                appendRow($tableEnd, allFlows.contracts[index], allFlows.allChunkedFlows[index], allFlows.paths[index], allFlows.paths[index].split(".").length, allFlows.paths[index])
+                let level = (allFlows.paths[index].match(/\./g) || []).length;
+                if (allFlows.paths[index].length==1)
+                    level=0;
+                
+                appendRow($tableEnd, allFlows.contracts[index],  allFlows.allChunkedRowupFlows[index],  allFlows.paths[index], level, allFlows.paths[index], "rollup")
 
+                level += 0.5;
+                appendRow($tableEnd, allFlows.contracts[index], allFlows.allChunkedFlows[index],  allFlows.paths[index], level, allFlows.paths[index], "detail")
             })
 
         }
@@ -566,24 +574,6 @@
         }
 
         appendFooter($tableEnd,{unit:targetCurrency}, genAccountLine(allFlows.allFlows, start, end, {}, targetCurrency, windowSize) , "Totals")
-
-        
-
-
-        // appendFooter($tableEnd, { unit: targetCurrency }, windowedFlows, "Totals")
-
-        function listAccounts(targetAccount, targetAccountName) {
-            if (!targetAccount.balances)
-                return
-            // total each account
-            let mergedFlows = getMergedFlowsAllAccounts(days, normalisedContracts, normalizedAcccounts, [targetAccountName], units, contractProto, targetCurrency)
-
-            let windowedFlows = mergeToWindow(mergedFlows, windowSize)
-
-            console.log(JSON.stringify(windowedFlows, null, 2))
-            appendFooter($tableEnd, targetAccount, windowedFlows, targetAccountName)
-        }
-        // walk contracts
 
         function createTable(windowedSeq) {
             $('#flows').empty();
@@ -641,15 +631,18 @@
             return $table
         }
 
-        function appendRow($appendPoint, targetContract, windowedFlows, contractName, level, path) {
+        function appendRow($appendPoint, targetContract, windowedFlows, contractName, level, path, cssClass) {
 
             function toggleShow(e) {
                 let $tr = $(this)
                 let parentPath = $tr.data("path")
+                let parentLevel = $tr.data("level")
+
                 $('tr').each((index, tr) => {
                     let $tr = $(tr)
                     let myPath = $tr.data("path")
-                    if (myPath && myPath.startsWith(parentPath + ".")) {
+                    let myLevel = $tr.data("level")
+                    if (myPath && myPath.startsWith(parentPath) && myPath.length>parentPath.length && (myLevel-1==parentLevel)) {
                         $tr.show()
                     }
                 })
@@ -662,10 +655,12 @@
             function toggleHide(e) {
                 let $tr = $(this)
                 let parentPath = $tr.data("path")
+                let parentLevel = $tr.data("level")
                 $('tr').each((index, tr) => {
                     let $tr = $(tr)
                     let myPath = $tr.data("path")
-                    if (myPath && myPath.startsWith(parentPath + ".")) {
+                    let myLevel = $tr.data("level")
+                    if (myPath && myPath.startsWith(parentPath) && myPath.length>parentPath.length && (myLevel>parentLevel)) {
                         $tr.hide()
                     }
                 })
@@ -675,43 +670,47 @@
 
             }
 
-            let $tr = $('<tr>')
-                .data("path", path + "." + (contractName ? contractName : ""))
-                .appendTo($appendPoint)
-                .on("click", toggleHide)
+            {
 
-            $tr.append(
-                $('<td>')
-                .text('-')
-                .addClass('plusminus')
-            )
+                let $tr = $('<tr>')
+                    .data("path", path )
+                    .data("level", level )
+                    .appendTo($appendPoint)
+                    .on("click", toggleHide)
+                    .addClass(cssClass)
 
-            $tr.append($('<td>')
-                .text((contractName ? contractName : ""))
-                .css("padding-left", ' ' + (level * 10) + "px")
-                .css("border", "1px solid #000")
-            );
+                $tr.append(
+                    $('<td>')
+                    .text('-')
+                    .addClass('plusminus')
+                )
 
-            _.each(contractProto, (value, prop) => {
-                if (value == null) {
-                    let $td;
-                    $tr.append($td = $('<td>').text(targetContract[prop])
+                $tr.append($('<td>')
+                    .text((contractName ? contractName : ""))
+                    .css("padding-left", ' ' + (level * 10) + "px")
+                    .css("border", "1px solid #000")
+                );
+
+                _.each(contractProto, (value, prop) => {
+                    if (value == null) {
+                        let $td;
+                        $tr.append($td = $('<td>').text(targetContract[prop])
+                            .css("border", "1px solid #000")
+                            .css("padding-left", ' ' + (level * 10) + "px")
+                        );
+                        if (targetContract && targetContract.inherited && targetContract.inherited.indexOf(prop) != -1) {
+                            $td.css("background-color", "lightgrey")
+                        }
+                    }
+                })
+
+                _.each(windowedFlows, (wind, day) => {
+                    $tr.append($('<td>').text(wind.amount)
                         .css("border", "1px solid #000")
                         .css("padding-left", ' ' + (level * 10) + "px")
                     );
-                    if (targetContract && targetContract.inherited && targetContract.inherited.indexOf(prop) != -1) {
-                        $td.css("background-color", "lightgrey")
-                    }
-                }
-            })
-
-            _.each(windowedFlows, (wind, day) => {
-                $tr.append($('<td>').text(wind.amount)
-                    .css("border", "1px solid #000")
-                    .css("padding-left", ' ' + (level * 10) + "px")
-                );
-            })
-
+                })
+            }
         }
 
         function appendFooter($appendPoint, targetContract, windowedFlows, contractName) {
@@ -750,6 +749,15 @@
 
     $(refreshWindows)
     </script>
+
+    <style type="text/css">
+       .rollup { background-color :lightgrey;}
+ /*        .detail { display: none; }
+        .rollup { display: ''; }
+        .detail { display: ''; }
+*/
+
+    </style>
 </head>
 
 <body>
