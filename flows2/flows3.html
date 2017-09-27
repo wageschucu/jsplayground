@@ -48,7 +48,7 @@
     // contracts,start,end => genAllContractLines => [all-chunkFlows],[all-flows]
     function genAllContractLines(normalizedContracts, start, end, rythm) {
         // walk-contracts
-        let allResults = { allFlows: [], allChunkedFlows: [], allChunkedRowupFlows: [], paths: [], contracts: [] }
+        let allResults = { allFlows: [], allChunkedFlows: [], allChunkedRowupFlows: [], paths: [], contracts: [], aggregateCounts:[] }
         walkPojo(normalizedContracts, (contract, key, level, path) => {
             if (!isContract(contract)) return
             let result = genContractLine(contract, start, end, rythm)
@@ -58,6 +58,7 @@
             // rollup for each account, if there is subs 
             allResults.contracts.push(contract)
             allResults.paths.push(path + (key ? key : ""))
+            allResults.aggregateCounts.push(result.aggregateCount)
         })
         return allResults
     }
@@ -97,8 +98,10 @@
 
         // fetch all from this contract down: flag when there are not sub contracts:?some null value 
         let allFlows = getAllFlows(normalizedContract, start, end)
+        let aggregateCount= allFlows.length
         let rollupFlows = genRollupFlows(start, end, allFlows, null, normalizedContract.unit)
         result.chunkedRollupFlows = chunkFlows(start, end, rollupFlows, rythm)
+        result.aggregateCount = aggregateCount
         return result
     }
 
@@ -556,10 +559,9 @@
                 if (allFlows.paths[index].length==1)
                     level=0;
                 
-                appendRow($tableEnd, allFlows.contracts[index],  allFlows.allChunkedRowupFlows[index],  allFlows.paths[index], level, allFlows.paths[index], "rollup")
+                appendRow($tableEnd, allFlows.contracts[index],  allFlows.allChunkedRowupFlows[index],  allFlows.paths[index], level, allFlows.paths[index], "rollup", index==0, allFlows.aggregateCounts[index])
 
-                level += 0.5;
-                appendRow($tableEnd, allFlows.contracts[index], allFlows.allChunkedFlows[index],  allFlows.paths[index], level, allFlows.paths[index], "detail")
+                appendRow($tableEnd, allFlows.contracts[index], allFlows.allChunkedFlows[index],  allFlows.paths[index], level, allFlows.paths[index], "detail", false, allFlows.aggregateCounts[index])
             })
 
         }
@@ -599,7 +601,7 @@
             // $('<div>').text("targetAccounts:"+targetAccounts)
             //         .appendTo($('#flows'))
 
-            $('<div>').text("targetCurrency:").append($('<input>').val(targetCurrency).on('blur', (e) => {
+            $('<div>').text("currency:").append($('<input>').val(targetCurrency).on('blur', (e) => {
                     targetCurrency = e.target.value;
                     refreshWindows()
                 }))
@@ -631,42 +633,69 @@
             return $table
         }
 
-        function appendRow($appendPoint, targetContract, windowedFlows, contractName, level, path, cssClass) {
+        function appendRow($appendPoint, targetContract, windowedFlows, contractName, level, path, cssClass, show, aggregateCount) {
 
-            function toggleShow(e) {
+            function toggle(e) {
                 let $tr = $(this)
-                let parentPath = $tr.data("path")
-                let parentLevel = $tr.data("level")
-
+                let targetPath = $tr.data("path")
+                let targetLevel = $tr.data("level")
+                let targetIsDetail = $tr.hasClass("detail")
+                let targetAggregateCount = $tr.hasClass("aggregateCount")
                 $('tr').each((index, tr) => {
                     let $tr = $(tr)
                     let myPath = $tr.data("path")
                     let myLevel = $tr.data("level")
-                    if (myPath && myPath.startsWith(parentPath) && myPath.length>parentPath.length && (myLevel-1==parentLevel)) {
-                        $tr.show()
+                    let myIsDetail = $tr.hasClass("detail")
+                    let myAggregateCount = $tr.data("aggregateCount")
+                    if (myPath && myPath.startsWith(targetPath)) {
+                        if (targetIsDetail) {
+                            // if aggregate: collapse
+                            if (myAggregateCount>1) {
+                                if  (myLevel==targetLevel && !myIsDetail)
+                                    $tr.show() 
+                                else if (myLevel>targetLevel) 
+                                    $tr.hide() 
+                                else if (myLevel==targetLevel  && myIsDetail) 
+                                    $tr.hide() 
+
+                            }
+                            // else ignore
+
+                                                           
+                        } else { // tareget is Rollup/aggregate
+
+                            if  (myLevel==targetLevel && myIsDetail)
+                                $tr.show() 
+                            else if (myLevel>targetLevel && myLevel<=targetLevel+1) {
+                                if (myIsDetail) {
+                                    if (myAggregateCount<=1)
+                                        $tr.show() 
+                                    else 
+                                        $tr.hide() 
+                                }
+                                else { // is rollup
+                                    if (myAggregateCount<=1)
+                                        $tr.hide() 
+                                    else 
+                                        $tr.show() 
+                                }
+
+                            } 
+                            else if (myLevel==targetLevel  && !myIsDetail) {
+                                $tr.hide() 
+                            }
+                        }
                     }
                 })
-                $tr
-                    .off("click", toggleShow)
-                    .on("click", toggleHide)
 
-            }
+                if (parentIsDetail) {
 
-            function toggleHide(e) {
-                let $tr = $(this)
-                let parentPath = $tr.data("path")
-                let parentLevel = $tr.data("level")
-                $('tr').each((index, tr) => {
-                    let $tr = $(tr)
-                    let myPath = $tr.data("path")
-                    let myLevel = $tr.data("level")
-                    if (myPath && myPath.startsWith(parentPath) && myPath.length>parentPath.length && (myLevel>parentLevel)) {
-                        $tr.hide()
-                    }
-                })
-                $tr
-                    .off("click", toggleHide)
-                    .on("click", toggleShow)
+                } else {
+                    $tr.hide();
+                }
+                // $tr
+                //     .off("click", toggleHide)
+                //     .on("click", toggleShow)
 
             }
 
@@ -675,14 +704,22 @@
                 let $tr = $('<tr>')
                     .data("path", path )
                     .data("level", level )
+                    .data("aggregateCount", aggregateCount )
                     .appendTo($appendPoint)
-                    .on("click", toggleHide)
+                    .on("click", toggle)
                     .addClass(cssClass)
 
+                let symbol= "+"
+                if (cssClass=='detail') {
+                    if (aggregateCount>1)
+                        symbol= "-"
+                } else {
+
+                }
                 $tr.append(
                     $('<td>')
-                    .text('-')
-                    .addClass('plusminus')
+                    .text(symbol)
+                    .addClass('expand/collapse')
                 )
 
                 $tr.append($('<td>')
@@ -710,6 +747,11 @@
                         .css("padding-left", ' ' + (level * 10) + "px")
                     );
                 })
+
+                if (show)
+                    $tr.show();
+                else 
+                    $tr.hide();
             }
         }
 
