@@ -21,7 +21,12 @@
     // todo: 
     //  non-contract objects/aggregates are not displayed: aggregate must be displayed, calculated: how to handle missing detail?
     //  normalizing balances: find previous balance from start date back, if exists, gen flows && balances until start date, insert this calculated balance into account balances list
-    // 
+    // bug: yearly first of jan does not rollup
+    // track negative balances in red, pop up with dates/details 
+    // zoom in gestures: pop up with/jump to stack for one level of detail or 2 more: M -> w or -> day explode 
+    // level show field: 1 to show major line items
+    // screen splitting a la excel 
+
     // [accountNames],[all-flows]=> genAllAccountLines => [chunkFlows], Total-chunkedFlows
     function genAllAccountLines(accountNames, normalizedAcccounts, allFlows, start, end, unit, rythm) {
         // walk-contracts
@@ -544,6 +549,53 @@
         start: "20160101",
         amount: 0,
         ruckbildungen : {
+            account:"spar",
+        },
+        apartment : {
+            miete : {
+                amount: 1800,
+            },
+            utils : {
+                amount: 150,
+            },
+            elect : {
+                amount: 150,
+                rythm:"Q"
+            },
+            insurance : {
+                rythm:"y",
+                haftpflicht : {
+                    amount: 150,
+                },
+                hausrat : {
+                    amount: 250,
+                },
+            },
+        },
+        health : {
+        },
+        income : {
+            lohn: {
+                amount:-10000,
+                rythm:"M",
+                start:"20170131",
+                bonus: {
+                    amount:-10000,
+                    rythm:"y",
+                    start:"20171231",
+                }
+            }
+        },
+        entertainmenttravel : {
+            michigan :  {
+                amount: 1000,
+                start:"20170701",
+                rythm: "y",
+            },
+        },
+        food : {
+        },
+        olivia : {
         },
         auto : {
             gas : {
@@ -633,8 +685,8 @@
     }
 
     let start = '20170101'
-    let end = '20251231'
-    let windowSize = "y"
+    let end = '20171231'
+    let windowSize = "M"
 
     //let targetAccounts = ["zahlungs", "checking", "spar"]
     let targetCurrency = "chf"
