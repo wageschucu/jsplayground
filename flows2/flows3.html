@@ -425,6 +425,7 @@
                 balances: {
                     '20170104': 1000,
                     '20171231': 600,
+                    '20171031': 800,
                 },
                 // transfer??
                 //spar: { start: 20170101, rythm: "M",  amount: 1000 },
@@ -544,6 +545,59 @@
     // gen all accounts: if above or unit change
     // refresh/redraw, generate, loop contracts, expand logic, css, 
     // budget examples, mine, a house?, retirement 
+           function expandmax(e) {
+                let $tr = $(this)
+                let targetPath = "."
+                let targetLevel = 0
+                let targetIsDetail = false
+                let targetAggregateCount = 0
+                $('tr').each((index, tr) => {
+                    let $tr = $(tr)
+                    let myPath = $tr.data("path")
+                    let myLevel = $tr.data("level")
+                    let myIsDetail = $tr.hasClass("detail")
+                    let myAggregateCount = $tr.data("aggregateCount")
+                    if (myPath && myPath.startsWith(targetPath)) {
+                        if (targetIsDetail) {
+                            // if aggregate: collapse
+                            if (targetAggregateCount>1) {
+                                if  (myLevel==targetLevel && !myIsDetail)
+                                    $tr.show() 
+                                else if (myLevel>targetLevel) 
+                                    $tr.hide() 
+                                else if (myLevel==targetLevel  && myIsDetail) 
+                                    $tr.hide() 
+
+                            }
+                            // else ignore
+
+                                                           
+                        } else { // tareget is Rollup/aggregate
+
+                            if  (myLevel==targetLevel && myIsDetail)
+                                $tr.show() 
+                            else if (myLevel>targetLevel ) {
+                                if (myIsDetail) {
+                                        $tr.show() 
+                                }
+                                else { // is rollup
+                                        $tr.hide() 
+                                }
+
+                            } 
+                            else if (myLevel==targetLevel  && !myIsDetail) {
+                                $tr.hide() 
+                            }
+                        }
+                    }
+                })
+
+                // $tr
+                //     .off("click", toggleHide)
+                //     .on("click", toggleShow)
+
+            }
+
     function refreshWindows() {
 
         let allFlows = genAllContractLines(normalisedContracts, start, end, windowSize)
@@ -587,13 +641,13 @@
                 .appendTo($('#flows'))
 
             $('<div>').text("start:").append($input = $('<input>').val(start).on('blur', (e) => {
-                    start = moment(e.target.value, 'YYYYMMDD');
+                    start = ""+e.target.value;
                     refreshWindows()
                 }))
                 .appendTo($('#flows'))
 
             $('<div>').text("end:").append($input = $('<input>').val(end).on('blur', (e) => {
-                    end = moment(e.target.value, 'YYYYMMDD');
+                    end = ""+e.target.value;
                     refreshWindows()
                 }))
                 .appendTo($('#flows'))
@@ -615,7 +669,7 @@
             )
 
             $header
-                .append($('<td>').text("+-"))
+                .append($('<td>').text("+-").on("click", expandmax))
                 .append($('<td>').text("name")
                     .css("border", "1px solid #000"));
 
@@ -630,6 +684,7 @@
                     .css("border", "1px solid #000"));
             })
 
+ 
             return $table
         }
 
@@ -788,6 +843,7 @@
     }
 
     $(refreshWindows)
+    $(expandmax)
     </script>
 
     <style type="text/css">
