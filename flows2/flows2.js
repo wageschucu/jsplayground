@@ -34,7 +34,7 @@ console.log("Hello World2 days");
 
 // id => path to contract: contracts.household.swisscom, contracts.household.miete
 
-const contracts = {
+const contractsOld = {
 	acct: "zahlungs"
 	,unit: "chf"
 	,rythm: "M"

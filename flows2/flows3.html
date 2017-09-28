@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
 
+
+
 <head>
     <meta charset="UTF-8">
     <title>Flows2</title>
@@ -15,6 +17,11 @@
  -->
     <script type="text/javascript" src="jquery-3.2.1.js"></script>
     <script type="text/javascript">
+
+    // todo: 
+    //  non-contract objects/aggregates are not displayed: aggregate must be displayed, calculated: how to handle missing detail?
+    //  normalizing balances: find previous balance from start date back, if exists, gen flows && balances until start date, insert this calculated balance into account balances list
+    // 
     // [accountNames],[all-flows]=> genAllAccountLines => [chunkFlows], Total-chunkedFlows
     function genAllAccountLines(accountNames, normalizedAcccounts, allFlows, start, end, unit, rythm) {
         // walk-contracts
@@ -122,8 +129,21 @@
         return allFlows
     }
 
-    // contract,start,end,unit=>genFlows=>flows{day:{ amount, unit, account },...}
+    function  parseRythm(rythm) {
+        let res = { length:1, rythm:""}
+        let a = rythm.split("-")
+        if (a.length==1)
+            res.rythm=a[0]
+        else {
+            res.rythm=a[1]
+            res.length=parseInt(a[0])            
+        }
+        if (res.rythm=="y")
+            console.log("found")
+        return res
+    }
 
+    // contract,start,end,unit=>genFlows=>flows{day:{ amount, unit, account },...}
     function genFlows(start, end, rythm, normalizedContract) {
         let flows = {}
         if (normalizedContract && normalizedContract.start > start)
@@ -135,6 +155,7 @@
 
         let current = start
         let next;
+        let parsedRythm = parseRythm(rythm)
 
         while (current <= end) {
             let flow = {}
@@ -144,12 +165,14 @@
                 flow.account = normalizedContract.account
             }
             flows[current] = flow;
-
-            next = moment(current, 'YYYYMMDD').add(1, rythm).format('YYYYMMDD')
-            if (next == current) { // in case moment duration/rythm code is incorrect:moment returns same date
-                throw "constant current date :" + current + " rythm: " + rythm
+           
+            for (i = 0; i < parsedRythm.length; i++) { 
+                next = moment(current, 'YYYYMMDD').add(1, parsedRythm.rythm).format('YYYYMMDD')
+                if (next == current) { // in case moment duration/rythm code is incorrect:moment returns same date
+                    throw "constant current date :" + current + " rythm: " + rythm
+                }
+                current = next;
             }
-            current = next;
         }
         return flows
     }
@@ -169,14 +192,14 @@
 
         while (current <= last) {
             next = moment(current, 'YYYYMMDD').add(1, rythm).format('YYYYMMDD')
+            if (next == current) {
+                throw "constant current date :" + current + " , rythm: " + rythm
+            }
             let nextminusone = moment(next, 'YYYYMMDD').add(-1, "d").format('YYYYMMDD')
             let chunkName = current + "-" + nextminusone + "-" + rythm
 
             chunkedFlows[chunkName] = gatherAndMergeFlows(current, nextminusone, flows)
 
-            if (next == current) {
-                throw "constant current date :" + current + " , rythm: " + rythm
-            }
             current = next
         }
         return chunkedFlows
@@ -208,7 +231,7 @@
 
             if (flow && flow.account && Array.isArray(flow.account))
                 merged.account = [...new Set([...merged.account, ...flow.account])];
-            else if (flow.account)
+            else if (flow&&flow.account)
                 merged.account.push(flow.account)
 
         } else {
@@ -281,6 +304,28 @@
         contract.amount = -contract.amount
     }
 
+    function normalizeTransfers(contracts) {
+
+        return function (contract, key, level, path) {
+            if (!contract.contract)
+                return
+            let transferContract = 
+                _(path.split("."))
+                .filter(elem=>elem)
+                .unshift(contract.contract)
+                .push(key)
+                .reduce((current,pathElement)=>{
+                    current[pathElement] = current[pathElement]||{}; 
+                    return current[pathElement] 
+                }, contracts)
+            clone(contract, true, transferContract)
+            transferContract.amount = -transferContract.amount
+            transferContract.contract = undefined
+            transferContract.account =  transferContract.transferAccount ||  transferContract.account
+            transferContract.transferAccount = undefined
+        }
+    }
+
     function normalizeDates(contract) {
         // set start
         // norm start
@@ -310,6 +355,7 @@
         contracts = inherit(contracts, {}, contractProto, true)
         walkPojo(contracts, normalizeDates)
         walkPojo(contracts, normalizeAmount)
+        walkPojo(contracts, normalizeTransfers(contracts))
         return contracts
     }
 
@@ -365,12 +411,16 @@
     }
 
     // deep copy, but not overwriting dest leaves
-    function clone(source, deep) {
-        let destination = {}
+    function clone(source, deep, destination) {
+        if (!destination)
+            destination = {}
         for (var property in source) {
             if (typeof source[property] === "object" && deep) {
-                destination[property] = {}
-                clone(source[property], destination[property]);
+                if (Array.isArray(source[property]))
+                    destination[property] = []
+                else
+                    destination[property] = {}
+                clone(source[property], deep, destination[property]);
             } else {
                 destination[property] = source[property];
             }
@@ -408,7 +458,9 @@
         rythm: null,
         flows: [],
         unit: null,
-        inherited: []
+        inherited: [],
+        contract:"",
+        transferAccount:""
     }
     const prototypeAccount = {
         unit: null,
@@ -485,6 +537,59 @@
     // minutes  m
     // seconds  s
     // milliseconds ms
+    let contracts = {
+        account: "zahlungs",
+        unit: "chf",
+        rythm: "M",
+        start: "20160101",
+        amount: 0,
+        ruckbildungen : {
+        },
+        auto : {
+            gas : {
+                amount: 100,
+            },
+            insurance : {
+                kaskoetc : {
+                    amount: 100,
+                },
+                garanteeextension : {
+                    amount: 100,
+                },
+            },
+            oil : {
+                amount: 100,
+            },
+            service : {
+                amount: 100,
+            },
+            amortisation : {
+                contract: "ruckbildungen",
+                amount: 250,
+                transferAccount:"spar"
+            },
+            tires : {
+                rotation : {
+                    amount: 100,
+                },
+                replacement : {
+                    amount: 100,
+                },
+            },
+            replacement : {
+                start: "20221231",
+                rythm:"5-y",
+                account: "spar",
+                sell : {
+                    amount: -15000,
+                },
+                buy : {
+                    amount: 30000,
+                },
+            },
+        }
+    }
+
     let testContract = {
         account: "zahlungs",
         unit: "chf",
@@ -528,15 +633,15 @@
     }
 
     let start = '20170101'
-    let end = '20171231'
-    let windowSize = "Q"
+    let end = '20251231'
+    let windowSize = "y"
 
     //let targetAccounts = ["zahlungs", "checking", "spar"]
     let targetCurrency = "chf"
 
     let normalizedAcccounts = normaliseAccounts(accounts, start, end, prototypeAccount)
 
-    let normalisedContracts = normaliseContracts(testContract, contractProto)
+    let normalisedContracts = normaliseContracts(contracts, contractProto)
 
 
     // console.log(JSON.stringify(allAcctflows, null, 2))
@@ -613,9 +718,9 @@
                 if (allFlows.paths[index].length==1)
                     level=0;
                 
-                appendRow($tableEnd, allFlows.contracts[index],  allFlows.allChunkedRowupFlows[index],  allFlows.paths[index], level, allFlows.paths[index], "rollup", index==0, allFlows.aggregateCounts[index])
+                appendRow($tableEnd, allFlows.contracts[index],  allFlows.allChunkedRowupFlows[index],  allFlows.paths[index].split(".").pop(), level, allFlows.paths[index], "rollup", index==0, allFlows.aggregateCounts[index])
 
-                appendRow($tableEnd, allFlows.contracts[index], allFlows.allChunkedFlows[index],  allFlows.paths[index], level, allFlows.paths[index], "detail", false, allFlows.aggregateCounts[index])
+                appendRow($tableEnd, allFlows.contracts[index], allFlows.allChunkedFlows[index],  allFlows.paths[index].split(".").pop(), level, allFlows.paths[index], "detail", false, allFlows.aggregateCounts[index])
             })
 
         }
@@ -810,7 +915,7 @@
 
         function appendFooter($appendPoint, targetContract, windowedFlows, contractName) {
 
-            let $tr = $('<tr>').appendTo($appendPoint).css("background-color", "lightgrey")
+            let $tr = $('<tr>').appendTo($appendPoint).css("background-color", "yellow")
 
             $tr.append($('<td>').text(''))
             $tr.append($('<td>').text(contractName)
@@ -839,11 +944,12 @@
             })
 
         }
+    
+    expandmax()
 
     }
 
     $(refreshWindows)
-    $(expandmax)
     </script>
 
     <style type="text/css">
