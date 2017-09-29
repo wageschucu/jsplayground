@@ -26,6 +26,7 @@
     // zoom in gestures: pop up with/jump to stack for one level of detail or 2 more: M -> w or -> day explode 
     // level show field: 1 to show major line items
     // screen splitting a la excel 
+    // gui jquery code redesign - collapse event handling!!
 
     // [accountNames],[all-flows]=> genAllAccountLines => [chunkFlows], Total-chunkedFlows
     function genAllAccountLines(accountNames, normalizedAcccounts, allFlows, start, end, unit, rythm) {
@@ -60,17 +61,23 @@
     // contracts,start,end => genAllContractLines => [all-chunkFlows],[all-flows]
     function genAllContractLines(normalizedContracts, start, end, rythm) {
         // walk-contracts
-        let allResults = { allFlows: [], allChunkedFlows: [], allChunkedRowupFlows: [], paths: [], contracts: [], aggregateCounts:[] }
-        walkPojo(normalizedContracts, (contract, key, level, path) => {
-            if (!isContract(contract)) return
-            let result = genContractLine(contract, start, end, rythm)
-            allResults.allFlows.push(result.flows)
-            allResults.allChunkedFlows.push(result.chunkedFlows)
-            allResults.allChunkedRowupFlows.push(result.chunkedRollupFlows)
+        let allResults = { allFlows: [], allChunkedFlows: [], allChunkedRowupFlows: [], paths: [], contracts: [], aggregateCounts:[], immediateChildren: [] }
+        walkPojo(normalizedContracts, (contract, key, level, path, immediateChildren) => {
+            if (!isContract(contract) && ! immediateChildren) return
+            let results = { allFlows: [], allChunkedFlows: [], allChunkedRowupFlows: [], paths: [], contracts: [], aggregateCounts:[] }
+            let result = genContractLine(contract, start, end, rythm, immediateChildren)
+
+            allResults.allFlows.unshift(result.flows)
+            allResults.allChunkedFlows.unshift(result.chunkedFlows)
+            allResults.allChunkedRowupFlows.unshift(result.chunkedRollupFlows)
             // rollup for each account, if there is subs 
-            allResults.contracts.push(contract)
-            allResults.paths.push(path + (key ? key : ""))
-            allResults.aggregateCounts.push(result.aggregateCount)
+            result.contract = contract; 
+            allResults.contracts.unshift(contract)
+            result.path = path + (key ? key : ""); 
+            allResults.paths.unshift(result.path)
+            allResults.aggregateCounts.unshift(result.aggregateCount)
+            allResults.immediateChildren.unshift(immediateChildren)
+            return result;
         })
         return allResults
     }
@@ -89,30 +96,34 @@
         //        let end = _.findLastKey(flows)
         let rolledUpFlows = genFlows(start, end, "d")
 
-        allFlows.forEach(flows => {
-            // filter out none listed accounts
-            let flow = _.chain(flows).values().head().value()
-            if (accountNames && accountNames.length && accountNames[0] !== undefined && !(flow && flow.account && accountNames.indexOf(flow.account) != -1))
-                return
+        if (allFlows) {
+            allFlows.forEach(flows => {
+                // filter out none listed accounts
+                let flow = _.chain(flows).values().head().value()
+                if (accountNames && accountNames.length && accountNames[0] !== undefined && !(flow && flow.account && accountNames.indexOf(flow.account) != -1))
+                    return
 
-            _.reduce(rolledUpFlows, (dummy, rollup, day) => {
-                rolledUpFlows[day] = mergeFlow(rollup, flows[day], unit)
+                _.reduce(rolledUpFlows, (dummy, rollup, day) => {
+                    rolledUpFlows[day] = mergeFlow(rollup, flows[day], unit)
+                })
             })
-        })
+        }
         return rolledUpFlows
     }
 
     // contract,start,end,unit,rythm=>genContractLine=>chunkFlows
-    function genContractLine(normalizedContract, start, end, rythm) {
+    function genContractLine(normalizedContract, start, end, rythm, immediateChildren) {
         let result = {}
         result.flows = genFlows(start, end, null, normalizedContract)
         result.chunkedFlows = chunkFlows(start, end, result.flows, rythm)
 
         // fetch all from this contract down: flag when there are not sub contracts:?some null value 
-        let allFlows = getAllFlows(normalizedContract, start, end)
-        let aggregateCount= allFlows.length
-        let rollupFlows = genRollupFlows(start, end, allFlows, null, normalizedContract.unit)
+        //let allFlows = getAllFlows(normalizedContract, start, end)
+        let childRollupFlows = immediateChildren && immediateChildren.rollupFlows 
+
+        let rollupFlows = genRollupFlows(start, end, (childRollupFlows|| []).concat(( result.flows|| [])), null, normalizedContract.unit)
         result.chunkedRollupFlows = chunkFlows(start, end, rollupFlows, rythm)
+        let aggregateCount= immediateChildren && immediateChildren.rollupFlows&& immediateChildren.rollupFlows.length || 0
         result.aggregateCount = aggregateCount
         return result
     }
@@ -156,27 +167,28 @@
         if (normalizedContract && normalizedContract.end < end)
             end = normalizedContract.end
         if (normalizedContract && !rythm)
-            rythm = normalizedContract.rythm
+            rythm = normalizedContract && normalizedContract.rythm
 
-        let current = start
-        let next;
-        let parsedRythm = parseRythm(rythm)
+        if (rythm) {
+            let current = start
+            let next;
+            let parsedRythm = parseRythm(rythm)
 
-        while (current <= end) {
-            let flow = {}
-            if (normalizedContract) {
-                flow.amount = normalizedContract.amount
-                flow.unit = normalizedContract.unit
-                flow.account = normalizedContract.account
-            }
-            flows[current] = flow;
-           
-            for (i = 0; i < parsedRythm.length; i++) { 
-                next = moment(current, 'YYYYMMDD').add(1, parsedRythm.rythm).format('YYYYMMDD')
-                if (next == current) { // in case moment duration/rythm code is incorrect:moment returns same date
-                    throw "constant current date :" + current + " rythm: " + rythm
+            while (current <= end) {
+                let flow = {}
+
+                flow.amount = normalizedContract && normalizedContract.amount
+                flow.unit = normalizedContract && normalizedContract.unit
+                flow.account = normalizedContract && normalizedContract.account
+                flows[current] = flow;
+               
+                for (i = 0; i < parsedRythm.length; i++) { 
+                    next = moment(current, 'YYYYMMDD').add(1, parsedRythm.rythm).format('YYYYMMDD')
+                    if (next == current) { // in case moment duration/rythm code is incorrect:moment returns same date
+                        throw "constant current date :" + current + " rythm: " + rythm
+                    }
+                    current = next;
                 }
-                current = next;
             }
         }
         return flows
@@ -434,20 +446,26 @@
     }
 
     function walkPojo(source, iterator, key, level, path) {
+
         if (level === undefined)
             level = 0
         if (path === undefined)
             path = "."
-        iterator(source, key, level, path)
         let subPath = path
         if (key)
             subPath += key + "."
+        let res;
         for (var property in source) {
             if (typeof source[property] === "object") {
-                walkPojo(source[property], iterator, property, level + 1, subPath)
+                let subres = walkPojo(source[property], iterator, property, level + 1, subPath)
+                if (subres!==undefined ) 
+                    res = (res || []).concat(Array.isArray(subres)? subres: [subres])
             }
         }
-
+        res = iterator(source, key, level, path, res)
+        if (res !== undefined && !Array.isArray(res))
+            res = [res]
+        return res
     }
 
     Set.prototype.toJSON = function toJSON() {
@@ -547,7 +565,7 @@
         unit: "chf",
         rythm: "M",
         start: "20160101",
-        amount: 0,
+
         ruckbildungen : {
             account:"spar",
         },
@@ -702,51 +720,25 @@
     // gen all accounts: if above or unit change
     // refresh/redraw, generate, loop contracts, expand logic, css, 
     // budget examples, mine, a house?, retirement 
-           function expandmax(e) {
+           function expandmax() {
                 let $tr = $(this)
-                let targetPath = "."
-                let targetLevel = 0
-                let targetIsDetail = false
-                let targetAggregateCount = 0
+
                 $('tr').each((index, tr) => {
                     let $tr = $(tr)
                     let myPath = $tr.data("path")
                     let myLevel = $tr.data("level")
                     let myIsDetail = $tr.hasClass("detail")
                     let myAggregateCount = $tr.data("aggregateCount")
-                    if (myPath && myPath.startsWith(targetPath)) {
-                        if (targetIsDetail) {
-                            // if aggregate: collapse
-                            if (targetAggregateCount>1) {
-                                if  (myLevel==targetLevel && !myIsDetail)
-                                    $tr.show() 
-                                else if (myLevel>targetLevel) 
-                                    $tr.hide() 
-                                else if (myLevel==targetLevel  && myIsDetail) 
-                                    $tr.hide() 
+                    let myHasChildren = $tr.data("hasChildren")
+                    let contract = $tr.data("contract")
 
-                            }
-                            // else ignore
+                    if ( myIsDetail && isContract(contract))
+                        $tr.show() 
+                    else if ( !myIsDetail && myHasChildren && !isContract(contract))
+                        $tr.show() 
+                    else
+                        $tr.hide() 
 
-                                                           
-                        } else { // tareget is Rollup/aggregate
-
-                            if  (myLevel==targetLevel && myIsDetail)
-                                $tr.show() 
-                            else if (myLevel>targetLevel ) {
-                                if (myIsDetail) {
-                                        $tr.show() 
-                                }
-                                else { // is rollup
-                                        $tr.hide() 
-                                }
-
-                            } 
-                            else if (myLevel==targetLevel  && !myIsDetail) {
-                                $tr.hide() 
-                            }
-                        }
-                    }
                 })
 
                 // $tr
@@ -770,9 +762,9 @@
                 if (allFlows.paths[index].length==1)
                     level=0;
                 
-                appendRow($tableEnd, allFlows.contracts[index],  allFlows.allChunkedRowupFlows[index],  allFlows.paths[index].split(".").pop(), level, allFlows.paths[index], "rollup", index==0, allFlows.aggregateCounts[index])
+                appendRow($tableEnd, allFlows.contracts[index],  allFlows.allChunkedRowupFlows[index],  allFlows.paths[index].split(".").pop(), level, allFlows.paths[index], "rollup", true, allFlows.aggregateCounts[index], allFlows.immediateChildren && allFlows.immediateChildren.length)
 
-                appendRow($tableEnd, allFlows.contracts[index], allFlows.allChunkedFlows[index],  allFlows.paths[index].split(".").pop(), level, allFlows.paths[index], "detail", false, allFlows.aggregateCounts[index])
+                appendRow($tableEnd, allFlows.contracts[index], allFlows.allChunkedFlows[index],  allFlows.paths[index].split(".").pop(), level, allFlows.paths[index], "detail", true, allFlows.aggregateCounts[index], allFlows.immediateChildren && allFlows.immediateChildren.length)
             })
 
         }
@@ -845,7 +837,7 @@
             return $table
         }
 
-        function appendRow($appendPoint, targetContract, windowedFlows, contractName, level, path, cssClass, show, aggregateCount) {
+        function appendRow($appendPoint, targetContract, windowedFlows, contractName, level, path, cssClass, show, aggregateCount, hasChildren) {
 
             function toggle(e) {
                 let $tr = $(this)
@@ -912,6 +904,9 @@
                     .data("path", path )
                     .data("level", level )
                     .data("aggregateCount", aggregateCount )
+                    .data("hasChildren", aggregateCount )
+                    .data("contract", targetContract )
+
                     .appendTo($appendPoint)
                     .on("click", toggle)
                     .addClass(cssClass)
@@ -997,7 +992,7 @@
 
         }
     
-    expandmax()
+   // expandmax()
 
     }
 
