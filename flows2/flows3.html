@@ -80,7 +80,7 @@
             allResults.immediateChildren.unshift(immediateChildren)
             allResults.hasDetail.unshift(result.hasDetail)
 
-            return result;
+            return result.allFlows;
         })
         return allResults
     }
@@ -114,16 +114,6 @@
         return rolledUpFlows
     }
 
-    function pluckMergeArrays(array,  property) {
-        let res=[];
-        if (array && Array.isArray(array)) {
-            array.forEach(item=> { 
-                res=res.concat(item && Array.isArray(item[property]) && item[property]|| [])
-            })
-        }
-        return res;
-    }
-
     // contract,start,end,unit,rythm=>genContractLine=>chunkFlows
     function genContractLine(normalizedContract, start, end, rythm, immediateChildren) {
         let result = {}
@@ -131,31 +121,15 @@
         result.chunkedFlows = chunkFlows(start, end, result.flows, rythm)
 
         // fetch all from this contract down: flag when there are not sub contracts:?some null value 
-        result.allRollupFlows = (immediateChildren && pluckMergeArrays(immediateChildren,  "allRollupFlows") || []).concat(( result.flows && [result.flows]|| []))
-        let rollupFlows = genRollupFlows(start, end, result.allRollupFlows, null, normalizedContract.unit)
+        result.allFlows = immediateChildren|| []
+        result.allFlows.push(result.flows)
+        let rollupFlows = genRollupFlows(start, end, result.allFlows, null, normalizedContract.unit)
         result.chunkedRollupFlows = chunkFlows(start, end, rollupFlows, rythm)
         let aggregateCount= immediateChildren && immediateChildren.length || 0
         result.aggregateCount = aggregateCount
         result.hasDetail=isContract(normalizedContract)
         return result
     }
-
-    // contract,start,end,unit,rythm=>genContractLine=>chunkFlows
-    // function genContractLineAndSubs(normalizedContract, start, end) {
-    //     let flows = genFlows(start, end, null, normalizedContract)
-    //     return flows
-    // }
-
-    // function getAllFlows(normalizedContracts, start, end) {
-    //     // walk-contracts
-    //     let allFlows = []
-    //     walkPojo(normalizedContracts, (contract, key, level, path) => {
-    //         if (!isContract(contract)) return
-    //         let flows = genContractLineAndSubs(contract, start, end)
-    //         allFlows.push(flows)
-    //     })
-    //     return allFlows
-    // }
 
     function  parseRythm(rythm) {
         let res = { length:1, rythm:""}
@@ -210,8 +184,6 @@
     // flows/actualFlows,rythm=>chunkFlows=>chunkedFlows{windows:{ amount, unit, accounts },...}
     // create window and gather flows and merge them
     function chunkFlows(start, last, flows, rythm) {
-        //let start = _.chain(flows).keys().head().value()
-        //let last = _.findLastKey(flows)
         let chunkedFlows = {}
 
         let current = start
@@ -496,6 +468,16 @@
         return [...Set.prototype.values.call(this)];
     }
 
+    // function pluckMergeArrays(array,  property) {
+    //     let res=[];
+    //     if (array && Array.isArray(array)) {
+    //         array.forEach(item=> { 
+    //             res=res.concat(item && Array.isArray(item[property]) && item[property]|| [])
+    //         }) }
+    //     return res;
+    // }
+
+
     const contractProto = {
         start: null,
         duration: null,
@@ -588,7 +570,7 @@
         account: "zahlungs",
         unit: "chf",
         rythm: "M",
-        start: "20160101",
+        start: "20170102",
 
         ruckbildungen : {
             account:"spar",
@@ -697,6 +679,9 @@
                     amount: 0,
                     parking3: {
                         amount: 10,
+                    },
+                    parking4: {
+                        amount: 5,
                     },
                 },
             },
