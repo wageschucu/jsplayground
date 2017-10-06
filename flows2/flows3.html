@@ -56,12 +56,12 @@
     }
 
     function isContract(contract) {
-        return contract && contract.amount !== undefined && contract.start !== undefined
+        return contract && contract.amount !== undefined &&  contract.amount != 0 && contract.start !== undefined
     }
     // contracts,start,end => genAllContractLines => [all-chunkFlows],[all-flows]
     function genAllContractLines(normalizedContracts, start, end, rythm) {
         // walk-contracts
-        let allResults = { allFlows: [], allChunkedFlows: [], allChunkedRowupFlows: [], paths: [], contracts: [], aggregateCounts:[], immediateChildren: [] }
+        let allResults = { allFlows: [], allChunkedFlows: [], allChunkedRowupFlows: [], paths: [], contracts: [], aggregateCounts:[], immediateChildren: [], hasDetail:[] }
         walkPojo(normalizedContracts, (contract, key, level, path, immediateChildren) => {
             if (!isContract(contract) && ! immediateChildren) return
             let results = { allFlows: [], allChunkedFlows: [], allChunkedRowupFlows: [], paths: [], contracts: [], aggregateCounts:[] }
@@ -74,9 +74,12 @@
             result.contract = contract; 
             allResults.contracts.unshift(contract)
             result.path = path + (key ? key : ""); 
+
             allResults.paths.unshift(result.path)
             allResults.aggregateCounts.unshift(result.aggregateCount)
             allResults.immediateChildren.unshift(immediateChildren)
+            allResults.hasDetail.unshift(result.hasDetail)
+
             return result;
         })
         return allResults
@@ -111,6 +114,16 @@
         return rolledUpFlows
     }
 
+    function pluckMergeArrays(array,  property) {
+        let res=[];
+        if (array && Array.isArray(array)) {
+            array.forEach(item=> { 
+                res=res.concat(item && Array.isArray(item[property]) && item[property]|| [])
+            })
+        }
+        return res;
+    }
+
     // contract,start,end,unit,rythm=>genContractLine=>chunkFlows
     function genContractLine(normalizedContract, start, end, rythm, immediateChildren) {
         let result = {}
@@ -118,32 +131,31 @@
         result.chunkedFlows = chunkFlows(start, end, result.flows, rythm)
 
         // fetch all from this contract down: flag when there are not sub contracts:?some null value 
-        //let allFlows = getAllFlows(normalizedContract, start, end)
-        let childRollupFlows = immediateChildren && immediateChildren.rollupFlows 
-
-        let rollupFlows = genRollupFlows(start, end, (childRollupFlows|| []).concat(( result.flows|| [])), null, normalizedContract.unit)
+        result.allRollupFlows = (immediateChildren && pluckMergeArrays(immediateChildren,  "allRollupFlows") || []).concat(( result.flows && [result.flows]|| []))
+        let rollupFlows = genRollupFlows(start, end, result.allRollupFlows, null, normalizedContract.unit)
         result.chunkedRollupFlows = chunkFlows(start, end, rollupFlows, rythm)
-        let aggregateCount= immediateChildren && immediateChildren.rollupFlows&& immediateChildren.rollupFlows.length || 0
+        let aggregateCount= immediateChildren && immediateChildren.length || 0
         result.aggregateCount = aggregateCount
+        result.hasDetail=isContract(normalizedContract)
         return result
     }
 
     // contract,start,end,unit,rythm=>genContractLine=>chunkFlows
-    function genContractLineAndSubs(normalizedContract, start, end) {
-        let flows = genFlows(start, end, null, normalizedContract)
-        return flows
-    }
+    // function genContractLineAndSubs(normalizedContract, start, end) {
+    //     let flows = genFlows(start, end, null, normalizedContract)
+    //     return flows
+    // }
 
-    function getAllFlows(normalizedContracts, start, end) {
-        // walk-contracts
-        let allFlows = []
-        walkPojo(normalizedContracts, (contract, key, level, path) => {
-            if (!isContract(contract)) return
-            let flows = genContractLineAndSubs(contract, start, end)
-            allFlows.push(flows)
-        })
-        return allFlows
-    }
+    // function getAllFlows(normalizedContracts, start, end) {
+    //     // walk-contracts
+    //     let allFlows = []
+    //     walkPojo(normalizedContracts, (contract, key, level, path) => {
+    //         if (!isContract(contract)) return
+    //         let flows = genContractLineAndSubs(contract, start, end)
+    //         allFlows.push(flows)
+    //     })
+    //     return allFlows
+    // }
 
     function  parseRythm(rythm) {
         let res = { length:1, rythm:""}
@@ -235,10 +247,15 @@
         return chunk
     }
     // mergeFlow - flow,unit,account:lazy init unit,account,add flow
+    function merge(oldFlow, flow) {
+      return mergeTo(mergeTo({}, oldFlow), flow)            
+    }
+    function mergeTo(oldFlow, flow) {
+    }
     function mergeFlow(oldFlow, flow, unit) {
         let merged = {}
         merged.unit = unit || oldFlow.unit || flow && flow.unit
-        // if diff to array
+        // account : if diff to array
         if ((oldFlow && oldFlow.account && Array.isArray(oldFlow.account)) || (flow && flow.account && Array.isArray(flow.account)) || (flow && oldFlow && oldFlow.account && flow.account && oldFlow.account != flow.account)) {
             merged.account = []
             if (oldFlow && oldFlow.account && Array.isArray(oldFlow.account))
@@ -254,11 +271,18 @@
         } else {
             merged.account = oldFlow.account || flow && flow.account
         }
-        merged.amount = oldFlow.amount || 0
 
-        merged.balance = (flow && flow.balance) || oldFlow.balance
-        merged.balance = Math.round(merged.balance * 100) / 100
-        merged.oldBalance = (flow && flow.oldBalance) || oldFlow.oldBalance
+        merged.amount = oldFlow.amount || 0
+ 
+        let newBalance = (flow && flow.balance) || (oldFlow && oldFlow.balance)
+        if (newBalance !== undefined) {
+            merged.balance = newBalance     
+        }
+
+        newBalance = (flow && flow.oldBalance) || (oldFlow && oldFlow.oldBalance)
+        if (newBalance !== undefined) {
+            merged.oldBalance = newBalance     
+        }
 
         if (flow && flow.amount) {
             merged.amount += convert(flow.amount, flow.unit, merged.unit)
@@ -571,7 +595,7 @@
         },
         apartment : {
             miete : {
-                amount: 1800,
+                amount: 1000,
             },
             utils : {
                 amount: 150,
@@ -594,18 +618,18 @@
         },
         income : {
             lohn: {
-                amount:-10000,
+                amount:-6000,
                 rythm:"M",
                 start:"20170131",
                 bonus: {
-                    amount:-10000,
+                    amount:-6000,
                     rythm:"y",
                     start:"20171231",
                 }
             }
         },
         entertainmenttravel : {
-            michigan :  {
+            vacation :  {
                 amount: 1000,
                 start:"20170701",
                 rythm: "y",
@@ -665,40 +689,17 @@
         unit: "chf",
         rythm: "M",
         start: "20170104",
-        amount: 184,
-        parking: {
+        auto: {
             amount: 150,
-        },
-        oil: {
-            rythm: "y",
-            start: "20171101",
-            amount: 200,
-        },
-        fluid: {
-            rythm: "Q",
-            start: "20170114",
-            amount: 20,
-        },
-        test: {
-            rythm: "w",
-            start: "20170114",
-            amount: 5,
-            testsub: {
-                rythm: "w",
-                start: "20170114",
-                amount: 5,
+            parking: {
+                amount: 100,
+                parking2: {
+                    amount: 0,
+                    parking3: {
+                        amount: 10,
+                    },
+                },
             },
-        },
-        income: {
-            start: "201701end",
-            amount: -350,
-            unit: "eur"
-        },
-        income2: {
-            account: "checking",
-            start: "201701end",
-            amount: -300,
-            unit: "usd"
         },
     }
 
@@ -720,6 +721,42 @@
     // gen all accounts: if above or unit change
     // refresh/redraw, generate, loop contracts, expand logic, css, 
     // budget examples, mine, a house?, retirement 
+    // expand path, max/one level
+    //   if below expanding: has children&&contract? show detail: show aggregate
+    // 
+    function expandOne() {
+         let $tr = $(this)
+         let path = $tr.data("path")
+         let level = $tr.data("level")
+         expand(path, level, false)
+    }
+
+    function expandThis($tr, max, plusone) {
+        let myContract = $tr.data("contract")
+        let myIsDetail = $tr.hasClass("detail")
+
+    }
+    function expand(path, level, max) {
+        $('tr').each((index, tr) => {
+            let $tr = $(tr)
+            let myPath = $tr.data("path")
+            let myLevel = $tr.data("level")
+            if (myPath && myPath.startsWith(path)) {
+                if (level == myLevel) {
+                    expandThis($tr, max, true)
+                }
+                else if (max) {
+                    expandThis($tr, max)
+                }
+                else if (level == myLevel-1) {
+                    expandThis($tr, max)
+                }
+                else 
+                    $tr.hide() 
+            }
+        })
+    }
+
            function expandmax() {
                 let $tr = $(this)
 
@@ -731,10 +768,11 @@
                     let myAggregateCount = $tr.data("aggregateCount")
                     let myHasChildren = $tr.data("hasChildren")
                     let contract = $tr.data("contract")
+                    let hasDetail = $tr.data("hasDetail")
 
                     if ( myIsDetail && isContract(contract))
                         $tr.show() 
-                    else if ( !myIsDetail && myHasChildren && !isContract(contract))
+                    else if ( !myIsDetail && !isContract(contract))
                         $tr.show() 
                     else
                         $tr.hide() 
@@ -762,9 +800,9 @@
                 if (allFlows.paths[index].length==1)
                     level=0;
                 
-                appendRow($tableEnd, allFlows.contracts[index],  allFlows.allChunkedRowupFlows[index],  allFlows.paths[index].split(".").pop(), level, allFlows.paths[index], "rollup", true, allFlows.aggregateCounts[index], allFlows.immediateChildren && allFlows.immediateChildren.length)
+                appendRow($tableEnd, allFlows.contracts[index],  allFlows.allChunkedRowupFlows[index],  allFlows.paths[index].split(".").pop(), level, allFlows.paths[index], "rollup", true, allFlows.aggregateCounts[index], allFlows.immediateChildren && allFlows.immediateChildren.length, allFlows.hasDetail[index])
 
-                appendRow($tableEnd, allFlows.contracts[index], allFlows.allChunkedFlows[index],  allFlows.paths[index].split(".").pop(), level, allFlows.paths[index], "detail", true, allFlows.aggregateCounts[index], allFlows.immediateChildren && allFlows.immediateChildren.length)
+                appendRow($tableEnd, allFlows.contracts[index], allFlows.allChunkedFlows[index],  allFlows.paths[index].split(".").pop(), level, allFlows.paths[index], "detail", true, allFlows.aggregateCounts[index], allFlows.immediateChildren && allFlows.immediateChildren.length, allFlows.hasDetail[index])
             })
 
         }
@@ -837,7 +875,7 @@
             return $table
         }
 
-        function appendRow($appendPoint, targetContract, windowedFlows, contractName, level, path, cssClass, show, aggregateCount, hasChildren) {
+        function appendRow($appendPoint, targetContract, windowedFlows, contractName, level, path, cssClass, show, aggregateCount, hasChildren, hasDetail) {
 
             function toggle(e) {
                 let $tr = $(this)
@@ -906,6 +944,7 @@
                     .data("aggregateCount", aggregateCount )
                     .data("hasChildren", aggregateCount )
                     .data("contract", targetContract )
+                    .data("hasDetail", hasDetail )
 
                     .appendTo($appendPoint)
                     .on("click", toggle)
@@ -958,6 +997,7 @@
                 else 
                     $tr.hide();
             }
+            expandmax()
         }
 
         function appendFooter($appendPoint, targetContract, windowedFlows, contractName) {
