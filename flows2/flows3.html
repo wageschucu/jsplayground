@@ -16,12 +16,8 @@
     <script type="text/javascript" src="jquery-3.2.1.js"></script>
     <script type="text/javascript">
     // todo: 
-    //  non-contract objects/aggregates are not displayed: aggregate must be displayed, calculated: how to handle missing detail?
-    //  normalizing balances: find previous balance from start date back, if exists, gen flows && balances until start date, insert this calculated balance into account balances list
-    // bug: yearly first of jan does not rollup
-    // track negative balances in red, pop up with dates/details 
     // zoom in gestures: pop up with/jump to stack for one level of detail or 2 more: M -> w or -> day explode 
-    // level show field: 1 to show major line items
+    //     https://www.w3schools.com/howto/howto_js_popup.asp
     // screen splitting a la excel 
     // gui jquery code redesign - collapse event handling!!
 
@@ -726,7 +722,7 @@
     //let targetAccounts = ["zahlungs", "checking", "spar"]
     let targetCurrency = "chf"
 
-    let normalisedContracts = normaliseContracts(testContracts, contractProto)
+    let normalisedContracts = normaliseContracts(contracts, contractProto)
 
     let normalizedAcccounts = normaliseAccounts(accounts, start, end, normalisedContracts, prototypeAccount)
 
