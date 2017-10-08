@@ -709,66 +709,132 @@
     // expand path, max/one level
     //   if below expanding: has children&&contract? show detail: show aggregate
     // 
-    function expandOne() {
-         let $tr = $(this)
-         let path = $tr.data("path")
-         let level = $tr.data("level")
-         expand(path, level, false)
-    }
+   function collapse() {
+        let $tr = $(this).closest('tr')
+        let path = $tr.data("path")
 
-    function expandThis($tr, max, plusone) {
-        let myContract = $tr.data("contract")
-        let myIsDetail = $tr.hasClass("detail")
-
-    }
-    function expand(path, level, max) {
         $('tr').each((index, tr) => {
             let $tr = $(tr)
             let myPath = $tr.data("path")
-            let myLevel = $tr.data("level")
-            if (myPath && myPath.startsWith(path)) {
-                if (level == myLevel) {
-                    expandThis($tr, max, true)
-                }
-                else if (max) {
-                    expandThis($tr, max)
-                }
-                else if (level == myLevel-1) {
-                    expandThis($tr, max)
-                }
+
+            if (path && (!myPath || !myPath.startsWith(path))) return 
+
+            let myIsDetail = $tr.hasClass("detail")
+            let contract = $tr.data("contract")
+            let hasChildren = $tr.data("aggregateCount" )
+            let hasDetail = $tr.data("hasDetail")
+
+            let show=false 
+            // if equal paths
+            // if has no children and has detail, show detail
+            // else show rollup
+            if (myPath==path) {
+                 if ( myIsDetail && !hasChildren && hasDetail)
+                    show = true
+                 else if ( !myIsDetail && hasChildren )
+                    show = true
                 else 
-                    $tr.hide() 
+                    show=false 
             }
+            else 
+                show=false 
+
+            if ( show )
+                addExpandHandler($tr, expandone, "+")
+
+            if (show)
+                $tr.show();
+            else
+                $tr.hide()
         })
+        removeExpandHandler($tr, collapse, "-")
+
+    }
+   function expandmax() {
+        let $tr = $(this).closest('tr')
+        let path = $tr.data("path")
+
+        $('tr').each((index, tr) => {
+            let $tr = $(tr)
+            let myPath = $tr.data("path")
+            let hasChildren = $tr.data("aggregateCount" )
+
+            if (path && (!myPath || !myPath.startsWith(path))) return 
+
+            let myIsDetail = $tr.hasClass("detail")
+            let contract = $tr.data("contract")
+
+            let show=false 
+            if ( myIsDetail && isContract(contract))
+                show=true 
+            else if ( !myIsDetail && !isContract(contract))
+                show=true
+            else
+                show=false 
+
+            let isLeaf = myIsDetail && !hasChildren
+            if ( show && !isLeaf)
+                addExpandHandler($tr, collapse, "-")
+
+            if (show)
+                $tr.show();
+            else
+                $tr.hide()
+        })
+        removeExpandHandler($tr, expandmax)
+
+    }
+   function expandone() {
+        let $tr = $(this).closest('tr')
+        let path = $tr.data("path")
+        let level = $tr.data("level")
+        if (level===undefined) level=0
+        if (!path) path="."
+
+        $('tr').each((index, tr) => {
+            let $tr = $(tr)
+            let myPath = $tr.data("path")
+
+            if (path && (!myPath || !myPath.startsWith(path))) return 
+
+            let myIsDetail = $tr.hasClass("detail")
+            let myLevel = $tr.data("level")
+            let contract = $tr.data("contract")
+            let myIsContract = isContract(contract)
+            let hasChildren = $tr.data("aggregateCount" )
+
+            let show=false 
+            if ( myIsDetail && myIsContract && (level == myLevel || level+1 == myLevel))
+                show=true
+            else if ( !myIsDetail && !myIsContract && (level == myLevel || level+1 == myLevel))
+                show=true
+            else
+                show=false 
+            let isLeaf = myIsDetail && !hasChildren
+            if ( !isLeaf) {
+                if ( show && (level == myLevel))
+                    addExpandHandler($tr, expandmax, "++")
+                if ( show  && (level+1 == myLevel))
+                    addExpandHandler($tr, expandone, "+")
+            }
+
+            if (show)
+                $tr.show();
+            else
+                $tr.hide()
+        })
+        removeExpandHandler($tr, expandone)
+
     }
 
-           function expandmax() {
-                let $tr = $(this)
+    function addExpandHandler($tr, handler, symbol) {
+        $('td', $tr).first().on("click", handler).text(symbol)
+        
+    }
+    function removeExpandHandler($tr, handler) {
+         $('td', $tr).first().off("click", handler)
+    }
 
-                $('tr').each((index, tr) => {
-                    let $tr = $(tr)
-                    let myPath = $tr.data("path")
-                    let myLevel = $tr.data("level")
-                    let myIsDetail = $tr.hasClass("detail")
-                    let myAggregateCount = $tr.data("aggregateCount")
-                    let myHasChildren = $tr.data("hasChildren")
-                    let contract = $tr.data("contract")
-                    let hasDetail = $tr.data("hasDetail")
-
-                    if ( myIsDetail && isContract(contract))
-                        $tr.show() 
-                    else if ( !myIsDetail && !isContract(contract))
-                        $tr.show() 
-                    else
-                        $tr.hide() 
-
-                })
-
-                // $tr
-                //     .off("click", toggleHide)
-                //     .on("click", toggleShow)
-
-            }
 
     function refreshWindows() {
 
@@ -789,7 +855,6 @@
 
                 appendRow($tableEnd, allFlows.contracts[index], allFlows.allChunkedFlows[index],  allFlows.paths[index].split(".").pop(), level, allFlows.paths[index], "detail", true, allFlows.aggregateCounts[index], allFlows.immediateChildren && allFlows.immediateChildren.length, allFlows.hasDetail[index])
             })
-
         }
 
         {
@@ -862,127 +927,64 @@
 
         function appendRow($appendPoint, targetContract, windowedFlows, contractName, level, path, cssClass, show, aggregateCount, hasChildren, hasDetail) {
 
-            function toggle(e) {
-                let $tr = $(this)
-                let targetPath = $tr.data("path")
-                let targetLevel = $tr.data("level")
-                let targetIsDetail = $tr.hasClass("detail")
-                let targetAggregateCount = $tr.data("aggregateCount")
-                $('tr').each((index, tr) => {
-                    let $tr = $(tr)
-                    let myPath = $tr.data("path")
-                    let myLevel = $tr.data("level")
-                    let myIsDetail = $tr.hasClass("detail")
-                    let myAggregateCount = $tr.data("aggregateCount")
-                    if (myPath && myPath.startsWith(targetPath)) {
-                        if (targetIsDetail) {
-                            // if aggregate: collapse
-                            if (targetAggregateCount>1) {
-                                if  (myLevel==targetLevel && !myIsDetail)
-                                    $tr.show() 
-                                else if (myLevel>targetLevel) 
-                                    $tr.hide() 
-                                else if (myLevel==targetLevel  && myIsDetail) 
-                                    $tr.hide() 
+            let $tr = $('<tr>')
+                .data("path", path )
+                .data("level", level )
+                .data("aggregateCount", aggregateCount )
+                .data("hasChildren", aggregateCount )
+                .data("contract", targetContract )
+                .data("hasDetail", hasDetail )
 
-                            }
-                            // else ignore
+                .appendTo($appendPoint)
+                //.on("click", toggle)
+                .addClass(cssClass)
 
-                                                           
-                        } else { // tareget is Rollup/aggregate
-
-                            if  (myLevel==targetLevel && myIsDetail)
-                                $tr.show() 
-                            else if (myLevel>targetLevel && myLevel<=targetLevel+1) {
-                                if (myIsDetail) {
-                                    if (myAggregateCount<=1)
-                                        $tr.show() 
-                                    else 
-                                        $tr.hide() 
-                                }
-                                else { // is rollup
-                                    if (myAggregateCount<=1)
-                                        $tr.hide() 
-                                    else 
-                                        $tr.show() 
-                                }
-
-                            } 
-                            else if (myLevel==targetLevel  && !myIsDetail) {
-                                $tr.hide() 
-                            }
-                        }
-                    }
-                })
-
-                // $tr
-                //     .off("click", toggleHide)
-                //     .on("click", toggleShow)
+            let symbol= "+"
+            if (cssClass=='detail') {
+                if (aggregateCount>1)
+                    symbol= "-"
+                else 
+                    symbol= ""
+                    
+            } else {
 
             }
+            $tr.append(
+                $('<td>')
+                .text(symbol)
+                .addClass('expand/collapse')
+            )
 
-            {
+            $tr.append($('<td>')
+                .text((contractName ? contractName : ""))
+                .css("padding-left", ' ' + (level * 10) + "px")
+                .css("border", "1px solid #000")
+            );
 
-                let $tr = $('<tr>')
-                    .data("path", path )
-                    .data("level", level )
-                    .data("aggregateCount", aggregateCount )
-                    .data("hasChildren", aggregateCount )
-                    .data("contract", targetContract )
-                    .data("hasDetail", hasDetail )
-
-                    .appendTo($appendPoint)
-                    .on("click", toggle)
-                    .addClass(cssClass)
-
-                let symbol= "+"
-                if (cssClass=='detail') {
-                    if (aggregateCount>1)
-                        symbol= "-"
-                    else 
-                        symbol= ""
-                        
-                } else {
-
-                }
-                $tr.append(
-                    $('<td>')
-                    .text(symbol)
-                    .addClass('expand/collapse')
-                )
-
-                $tr.append($('<td>')
-                    .text((contractName ? contractName : ""))
-                    .css("padding-left", ' ' + (level * 10) + "px")
-                    .css("border", "1px solid #000")
-                );
-
-                _.each(contractProto, (value, prop) => {
-                    if (value == null) {
-                        let $td;
-                        $tr.append($td = $('<td>').text(targetContract[prop])
-                            .css("border", "1px solid #000")
-                            .css("padding-left", ' ' + (level * 10) + "px")
-                        );
-                        if (targetContract && targetContract.inherited && targetContract.inherited.indexOf(prop) != -1) {
-                            $td.css("background-color", "lightgrey")
-                        }
-                    }
-                })
-
-                _.each(windowedFlows, (wind, day) => {
-                    $tr.append($('<td>').text(wind.amount)
+            _.each(contractProto, (value, prop) => {
+                if (value == null) {
+                    let $td;
+                    $tr.append($td = $('<td>').text(targetContract[prop])
                         .css("border", "1px solid #000")
                         .css("padding-left", ' ' + (level * 10) + "px")
                     );
-                })
+                    if (targetContract && targetContract.inherited && targetContract.inherited.indexOf(prop) != -1) {
+                        $td.css("background-color", "lightgrey")
+                    }
+                }
+            })
 
-                if (show)
-                    $tr.show();
-                else 
-                    $tr.hide();
-            }
-            expandmax()
+            _.each(windowedFlows, (wind, day) => {
+                $tr.append($('<td>').text(wind.amount)
+                    .css("border", "1px solid #000")
+                    .css("padding-left", ' ' + (level * 10) + "px")
+                );
+            })
+
+            if (show)
+                $tr.show();
+            else 
+                $tr.hide();
         }
 
         function appendFooter($appendPoint, targetContract, windowedFlows, contractName) {
@@ -1016,8 +1018,8 @@
             })
 
         }
-    
-   // expandmax()
+
+       expandone()
 
     }
 
