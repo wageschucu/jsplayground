@@ -14,14 +14,13 @@
     <!--     <script type="text/javascript" src="flows2.js"></script>
  -->
     <script type="text/javascript" src="jquery-3.2.1.js"></script>
+    <script type="text/javascript" src="/Users/paulgettel/Dropbox/data.js"></script>
     <script type="text/javascript">
     // todo: 
     // zoom in gestures: pop up with/jump to stack for one level of detail or 2 more: M -> w or -> day explode 
     //     https://www.w3schools.com/howto/howto_js_popup.asp
     // screen splitting a la excel 
     // gui jquery code redesign - collapse event handling!!
-
-    let test=true
 
     // [accountNames],[all-flows]=> genAllAccountLines => [chunkFlows], Total-chunkedFlows
     function genAllAccountLines(accountNames, normalizedAcccounts, allFlows, start, end, unit, rythm) {
@@ -577,303 +576,7 @@
     }
     </script>
     <script type="text/javascript">
-    var allflowsg;
-    const accounts = {
-        post: {
-            unit: "chf",
-            zahlungs: {
-                balances: {
-                    '20160101': 1000,
-                    '20161101': 2000,
-                    '20170101': 9000,
-                },
-                // transfer
-                transfers: [{ account:"monthly", start: 20170101, rythm: "M",  amount: 400 },
-                    { account:"spar", start: 20170101, rythm: "M",  amount: 2000 },],
-            },
-            monthly: {
-                balances: {
-                    '20171031': 100,
-                },
-                // transfer??
-                //spar: { start: 20170101, rythm: "M",  amount: 1000 },
-            },
-
-            usd: {
-                unit: "usd",
-                balances: {
-                    '20170101': 1000,
-                }
-            },
-            eur: {
-                unit: "eur",
-                balances: {
-                    '20170101': 10,
-                }
-            },
-            spar: {
-                balances: {
-                    '20170101': 100,
-                }
-            },
-            "3a": {
-                balances: {
-                    '20170101': 27000,
-                }
-            }
-        },
-        tnb: {
-            unit: "usd",
-            checking: {
-                balances: {
-                    '20170101': 10000,
-                }
-            },
-            savings: {
-                balances: {
-                    '20170101': 2000,
-                }
-            }
-        }
-    }
-    const testAccounts = {
-        post: {
-            unit: "chf",
-            zahlungs: {
-                balances: {
-                    '20160101': 0,
-                    '20171031': 0,
-                },
-            },
-        },
-    }
-
-    const units = {
-        chf: { eur: 1 / 1.2, usd: 1.1 },
-        eur: { chf: 1.2, usd: 1.1 },
-        usd: { eur: 1 / 1.1, chf: 1 / 1.1 }
-    }
-
-    // Key  Shorthand
-    // years    y
-    // quarters Q
-    // months   M
-    // weeks    w
-    // days d
-    // hours    h
-    // minutes  m
-    // seconds  s
-    // milliseconds ms
-    let contracts = {
-        account: "zahlungs",
-        unit: "chf",
-        rythm: "M",
-        start: "20160101",
-
-        ruckbildungen: {
-            account: "spar",
-        },
-        transfers : {},
-        apartment: {
-            "miete": {
-                amount: 1700,
-            },
-            utils: {
-                amount: 150,
-            },
-            elect: {
-                amount: 150,
-                rythm: "Q",
-            },
-            cleaning: {
-                amount: 75,
-                rythm: "w",
-                supplies: {
-                    amount: 25,
-                    rythm: "M",
-                    account:"monthly",
-                },
-            },
-            insurance: {
-                rythm: "y",
-                haftpflicht: {
-                    amount: 150,
-                },
-                hausrat: {
-                    amount: 250,
-                },
-            },
-        },
-        health: {
-            kk: {
-                amount: 400,
-                rythm: "M",
-                francise: {
-                    start: "20160301",
-                    amount: 300,
-                    rythm: "y"
-                },
-                copay: {
-                    amount: 30,
-                },
-            },
-            alternative: {
-                amount: 50,
-                rythm: "M",
-                account:"monthly",
-            },
-        },
-        income: {
-            lohn: {
-                amount: -9000,
-                rythm: "M",
-                start: "20170131",
-                bonus: {
-                    amount: -9000,
-                    rythm: "y",
-                    start: "20171231",
-                },
-            },
-            us: {
-                account: "checking",
-                tnb: {
-                    amount: -1000,
-                    rythm: "Q",
-                    start: "20160331",
-                    yearend: {
-                        amount: -3000,
-                        rythm: "y",
-                        start: "201712301",
-                    },
-                },
-                farm: {
-                    amount: -25000,
-                    rythm: "y",
-                    start: "20171231",
-                },
-            }
-        },
-        entertainmenttravel: {
-            vacation: {
-                amount: 1000,
-                start: "20170701",
-                rythm: "y",
-            },
-        },
-        food: {},
-        olivia: {
-            kk: {
-                amount: 80,
-                rythm: "M",
-                francise: {
-                    start: "20160301",
-                    amount: 0,
-                    rythm: "y"
-                },
-                copay: {
-                    amount: 0,
-                },
-            },
-            school: {
-                amount: 1100,
-                rythm: "M",
-            },
-            transport: {
-                amount: 60,
-                rythm: "M",
-            },
-            clothes: {
-                amount: 50,
-                rythm: "Q",
-            },
-
-        },
-        auto: {
-            gas: {
-                account:"monthly",
-                amount: 100,
-            },
-            vinette: {
-                start: "20161201",
-                rythm: "y",                
-                account:"monthly",
-                amount: 40,
-            },
-            insurance: {
-                kaskoetc: {
-                    amount: 100,
-                },
-                garanteeextension: {
-                    amount: 100,
-                },
-            },
-            oil: {
-                amount: 100,
-            },
-            service: {
-                amount: 100,
-            },
-            amortisation: {
-                contract: "ruckbildungen",
-                amount: 250,
-                transferAccount: "spar"
-            },
-            tires: {
-                rotation: {
-                    amount: 100,
-                },
-                replacement: {
-                    amount: 100,
-                },
-            },
-            replacement: {
-                start: "20221231",
-                rythm: "5-y",
-                account: "spar",
-                sell: {
-                    amount: -15000,
-                },
-                buy: {
-                    amount: 30000,
-                },
-            },
-        }
-    }
-
-    let testContracts = {
-        account: "zahlungs",
-        unit: "chf",
-        rythm: "M",
-        start: "20160101",
-        auto: {
-            amount: 150,
-            parking: {
-                amount: 100,
-                parking2: {
-                    amount: 0,
-                    parking3: {
-                        amount: 10,
-                    },
-                    parking4: {
-                        amount: 5,
-                    },
-                    income: {
-                        amount: -100,
-                    },
-                    income2: {
-                        amount: -50,
-                    },
-                },
-            },
-        },
-    }
-
-    let start = '20170101'
-    let end = '20171231'
-    let windowSize = "M"
-
-    //let targetAccounts = ["zahlungs", "checking", "spar"]
-    let targetCurrency = "chf"
+ 
 
     let normalisedContracts = (test)?normaliseContracts(testContracts, contractProto):normaliseContracts(contracts, contractProto)
 
@@ -1027,7 +730,7 @@
     function refreshWindows() {
 
         let allFlows = genAllContractLines(normalisedContracts, start, end, windowSize)
-        allflowsg = allFlows
+
         let allAccountNames = getAllAccountNames(normalizedAcccounts)
         let allAcctflows = genAllAccountLines(allAccountNames, normalizedAcccounts, allFlows.allFlows, start, end, targetCurrency, windowSize)
 
@@ -1055,7 +758,6 @@
         }
         let totalFlows = genRollupFlows(start, end, allAcctflows.allChunkedFlows, undefined, targetCurrency) 
 
-        // let totalFlows = genAccountLine(allflowsg.allFlows, start, end, {}, targetCurrency, windowSize)
         appendFooter($tableEnd, { unit: targetCurrency }, totalFlows, mergeFlows(totalFlows), "Totals", true )
 
         function createTable(windowedSeq) {
