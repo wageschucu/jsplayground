@@ -21,6 +21,8 @@
     // screen splitting a la excel 
     // gui jquery code redesign - collapse event handling!!
 
+    let test=false
+
     // [accountNames],[all-flows]=> genAllAccountLines => [chunkFlows], Total-chunkedFlows
     function genAllAccountLines(accountNames, normalizedAcccounts, allFlows, start, end, unit, rythm) {
         // walk-contracts
@@ -213,13 +215,6 @@
         }
         return chunk
     }
-    // mergeFlow - flow,unit,account:lazy init unit,account,add flow
-    function merge(oldFlow, flow) {
-        return mergeTo(mergeTo({}, oldFlow), flow)
-    }
-
-    function mergeTo(oldFlow, flow) {}
-
     function mergeFlow(oldFlow, flow, unit) {
         let merged = {}
         merged.unit = unit || oldFlow.unit || flow && flow.unit
@@ -241,6 +236,8 @@
         }
 
         merged.amount = oldFlow.amount || 0
+        merged.in = oldFlow.in || 0
+        merged.out = oldFlow.out || 0
 
         let newBalance = (flow && flow.balance) || (oldFlow && oldFlow.balance)
         if (newBalance !== undefined) {
@@ -252,9 +249,30 @@
             merged.oldBalance = newBalance
         }
 
+        if (flow && flow.in) {
+            let inamount=convert(flow.in, flow.unit, merged.unit)
+            merged.in += inamount
+            merged.in = Math.round(merged.in * 100) / 100
+        }
+         
+        if (flow && flow.out) {
+            let out=convert(flow.out, flow.unit, merged.unit)
+            merged.out += out
+            merged.out = Math.round(merged.out * 100) / 100
+        }
+         
         if (flow && flow.amount) {
-            merged.amount += convert(flow.amount, flow.unit, merged.unit)
+            let amount=convert(flow.amount, flow.unit, merged.unit)
+            merged.amount += amount
             merged.amount = Math.round(merged.amount * 100) / 100
+            if (amount>0 && typeof flow.in === "undefined") {
+                merged.in += amount
+                merged.in = Math.round(merged.in * 100) / 100
+            }
+            else if ( typeof flow.out === "undefined") {
+                merged.out += amount
+                merged.out = Math.round(merged.out * 100) / 100
+            }
         }
 
         if (flow && flow.negative || oldFlow && oldFlow.negative)
@@ -404,12 +422,37 @@
             }
         }
     }
+    function isTransfer(transfers, property) { return property=="transfers"}
 
     function normaliseAccounts(accounts, start, end, normalisedContracts, prototypeAccount) {
 
         let normalizedAcccounts = inherit(accounts, {}, prototypeAccount, true);
 
         walkPojo(normalizedAcccounts, bringFowardOldBalance)
+        walkPojo(normalizedAcccounts, implementTransfers)
+
+        function implementTransfers(transfers, property, level, path, res) {
+            if (!isTransfer(transfers, property)) return 
+            _.each(transfers, transfer=>{
+                let toAccount=transfer.account
+                let fromAccount=_.findLast(path.split("."))
+                // create contracts: transfers.accountfrom, transfers.accountto
+                normalisedContracts.transfers=normalisedContracts.transfers || {}
+                normalisedContracts.transfers[toAccount] = normalisedContracts.transfers[toAccount] || {}
+                let index = _.keys(normalisedContracts.transfers[toAccount]).length
+                normalisedContracts.transfers[toAccount][index] = clone(transfer, true)
+
+                normalisedContracts.transfers[fromAccount] = normalisedContracts.transfers[fromAccount] || {}
+                index = _.keys(normalisedContracts.transfers[fromAccount]).length
+                normalisedContracts.transfers[fromAccount][index] = clone(transfer, true)
+
+                normalisedContracts.transfers[fromAccount][index].amount = -transfer.amount
+                normalisedContracts.transfers[fromAccount][index].account = fromAccount
+
+            
+            })
+        }
+
         return normalizedAcccounts
     }
     // deep copy of undefined attributes
@@ -523,7 +566,8 @@
     const prototypeAccount = {
         unit: null,
         balances: [],
-        inherited: []
+        inherited: [],
+        transfers:[]
     }
     </script>
     <script type="text/javascript">
@@ -535,8 +579,15 @@
                 balances: {
                     '20160101': 1000,
                     '20161101': 2000,
-                    '20171031': 800,
-                    '20171231': 600,
+                    '20170101': 9000,
+                },
+                // transfer
+                transfers: [{ account:"monthly", start: 20170101, rythm: "M",  amount: 400 },
+                    { account:"spar", start: 20170101, rythm: "M",  amount: 2000 },],
+            },
+            monthly: {
+                balances: {
+                    '20171031': 100,
                 },
                 // transfer??
                 //spar: { start: 20170101, rythm: "M",  amount: 1000 },
@@ -545,7 +596,7 @@
             usd: {
                 unit: "usd",
                 balances: {
-                    '20170101': 100,
+                    '20170101': 1000,
                 }
             },
             eur: {
@@ -561,7 +612,7 @@
             },
             "3a": {
                 balances: {
-                    '20170101': 100,
+                    '20170101': 27000,
                 }
             }
         },
@@ -569,7 +620,7 @@
             unit: "usd",
             checking: {
                 balances: {
-                    '20170101': 2000,
+                    '20170101': 10000,
                 }
             },
             savings: {
@@ -578,6 +629,17 @@
                 }
             }
         }
+    }
+    const testAccounts = {
+        post: {
+            unit: "chf",
+            zahlungs: {
+                balances: {
+                    '20160101': 0,
+                    '20171031': 0,
+                },
+            },
+        },
     }
 
     const units = {
@@ -600,21 +662,31 @@
         account: "zahlungs",
         unit: "chf",
         rythm: "M",
-        start: "20170102",
+        start: "20160101",
 
         ruckbildungen: {
             account: "spar",
         },
+        transfers : {},
         apartment: {
-            miete: {
-                amount: 1000,
+            "miete": {
+                amount: 1700,
             },
             utils: {
                 amount: 150,
             },
             elect: {
                 amount: 150,
-                rythm: "Q"
+                rythm: "Q",
+            },
+            cleaning: {
+                amount: 75,
+                rythm: "w",
+                supplies: {
+                    amount: 25,
+                    rythm: "M",
+                    account:"monthly",
+                },
             },
             insurance: {
                 rythm: "y",
@@ -626,17 +698,53 @@
                 },
             },
         },
-        health: {},
+        health: {
+            kk: {
+                amount: 400,
+                rythm: "M",
+                francise: {
+                    start: "20160301",
+                    amount: 300,
+                    rythm: "y"
+                },
+                copay: {
+                    amount: 30,
+                },
+            },
+            alternative: {
+                amount: 50,
+                rythm: "M",
+                account:"monthly",
+            },
+        },
         income: {
             lohn: {
-                amount: -6000,
+                amount: -9000,
                 rythm: "M",
                 start: "20170131",
                 bonus: {
-                    amount: -6000,
+                    amount: -9000,
                     rythm: "y",
                     start: "20171231",
-                }
+                },
+            },
+            us: {
+                account: "checking",
+                tnb: {
+                    amount: -1000,
+                    rythm: "Q",
+                    start: "20160331",
+                    yearend: {
+                        amount: -3000,
+                        rythm: "y",
+                        start: "201712301",
+                    },
+                },
+                farm: {
+                    amount: -25000,
+                    rythm: "y",
+                    start: "20171231",
+                },
             }
         },
         entertainmenttravel: {
@@ -647,10 +755,43 @@
             },
         },
         food: {},
-        olivia: {},
+        olivia: {
+            kk: {
+                amount: 80,
+                rythm: "M",
+                francise: {
+                    start: "20160301",
+                    amount: 0,
+                    rythm: "y"
+                },
+                copay: {
+                    amount: 0,
+                },
+            },
+            school: {
+                amount: 1100,
+                rythm: "M",
+            },
+            transport: {
+                amount: 60,
+                rythm: "M",
+            },
+            clothes: {
+                amount: 50,
+                rythm: "Q",
+            },
+
+        },
         auto: {
             gas: {
+                account:"monthly",
                 amount: 100,
+            },
+            vinette: {
+                start: "20161201",
+                rythm: "y",                
+                account:"monthly",
+                amount: 40,
             },
             insurance: {
                 kaskoetc: {
@@ -710,6 +851,12 @@
                     parking4: {
                         amount: 5,
                     },
+                    income: {
+                        amount: -100,
+                    },
+                    income2: {
+                        amount: -50,
+                    },
                 },
             },
         },
@@ -722,9 +869,10 @@
     //let targetAccounts = ["zahlungs", "checking", "spar"]
     let targetCurrency = "chf"
 
-    let normalisedContracts = normaliseContracts(contracts, contractProto)
+    let normalisedContracts = (test)?normaliseContracts(testContracts, contractProto):normaliseContracts(contracts, contractProto)
 
-    let normalizedAcccounts = normaliseAccounts(accounts, start, end, normalisedContracts, prototypeAccount)
+    let normalizedAcccounts = (test)?normaliseAccounts(testAccounts, start, end, normalisedContracts, prototypeAccount):normaliseAccounts(accounts, start, end, normalisedContracts, prototypeAccount)
+
 
     // console.log(JSON.stringify(allAcctflows, null, 2))
 
@@ -811,7 +959,8 @@
 
     }
 
-    function expandone() {
+    function expandone(levelsIn) {
+        let levels = typeof levelsIn === "number" ? levelsIn:1
         let $tr = $(this).closest('tr')
         let path = $tr.data("path")
         let level = $tr.data("level")
@@ -831,17 +980,17 @@
             let hasChildren = $tr.data("aggregateCount")
 
             let show = false
-            if (myIsDetail && myIsContract && (level == myLevel || level + 1 == myLevel))
+            if (myIsDetail && myIsContract && (level <= myLevel && level + levels >= myLevel))
                 show = true
-            else if (!myIsDetail && !myIsContract && (level == myLevel || level + 1 == myLevel))
+            else if (!myIsDetail && !myIsContract && (level <= myLevel && level + levels >= myLevel))
                 show = true
             else
                 show = false
             let isLeaf = myIsDetail && !hasChildren
             if (!isLeaf) {
-                if (show && (level == myLevel))
+                if (show && (level <= myLevel && level + levels > myLevel))
                     addExpandHandler($tr, expandmax, "++")
-                if (show && (level + 1 == myLevel))
+                if (show && level + levels == myLevel)
                     addExpandHandler($tr, expandone, "+")
             }
 
@@ -967,6 +1116,10 @@
                 //.on("click", toggle)
                 .addClass(cssClass)
 
+            let factor=30
+            let offset=130
+            $tr.css("background-color","rgb(" + (offset+level*factor) + "," + (offset+level*factor) + "," + (offset+level*factor) + ")")
+
             let symbol = "+"
             if (cssClass == 'detail') {
                 if (aggregateCount > 1)
@@ -1002,17 +1155,32 @@
                 }
             })
 
-            _.each(windowedFlows, (wind, day) => {
-                $tr.append($('<td>').text(wind.amount)
-                    .css("border", "1px solid #000")
-                    .css("padding-left", ' ' + (level * 10) + "px")
-                );
-            })
+            if (cssClass == 'detail') 
+                _.each(windowedFlows, (wind, day) => {
+                    $tr.append($('<td>')
+                       .append($('<span>').text(wind.amount))
+                        .css("border", "1px solid #000")
+                        .css("padding-left", ' ' + (level * 10) + "px")
+                    );
+                })
+                else
+                _.each(windowedFlows, (wind, day) => {
+                    $tr.append($('<td>')
+                        .append($('<span>').text(wind.in))
+                        .append($('<br>'))
+                        .append($('<span>').text(wind.out))
+                        .append($('<br>'))
+                       .append($('<span>').text(wind.amount))
+                        .css("border", "1px solid #000")
+                        .css("padding-left", ' ' + (level * 10) + "px")
+                    );
+                })
 
             if (show)
                 $tr.show();
             else
                 $tr.hide();
+
         }
 
         function appendFooter($appendPoint, targetContract, windowedFlows, contractName) {
@@ -1033,6 +1201,10 @@
                 let $td;
                 $tr.append(
                     $('<td>')
+                    .append($('<span>').text(wind.in))
+                    .append($('<br>'))
+                    .append($('<span>').text(wind.out))
+                    .append($('<br>'))
                     .append($('<span>').text(wind.amount))
                     .append($('<br>'))
                     .append($bal = $('<span>').text(" (" + (wind.balance ? wind.balance : '0') + ")"))
@@ -1052,7 +1224,7 @@
 
         }
 
-        expandone()
+        expandone(2)
 
     }
 
@@ -1060,7 +1232,10 @@
     </script>
     <style type="text/css">
     .rollup {
-        background-color: lightgrey;
+          font-weight: bold;
+    }
+    .detail {     
+        text-decoration: underline;
     }
     /*        .detail { display: none; }
         .rollup { display: ''; }
