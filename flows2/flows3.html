@@ -21,7 +21,7 @@
     // screen splitting a la excel 
     // gui jquery code redesign - collapse event handling!!
 
-    let test=false
+    let test=true
 
     // [accountNames],[all-flows]=> genAllAccountLines => [chunkFlows], Total-chunkedFlows
     function genAllAccountLines(accountNames, normalizedAcccounts, allFlows, start, end, unit, rythm) {
@@ -92,10 +92,16 @@
     }
 
     function genRollupFlows(start, end, allFlows, accountNames, unit) {
-        //        let start = _.chain(flows).keys().head().value()
-        //        let end = _.findLastKey(flows)
-        let rolledUpFlows = genFlows(start, end, "d")
-
+        let startOfFlows = _.chain(allFlows).values().head().keys().head().value()
+        let rolledUpFlows = (startOfFlows && startOfFlows.split("-").length>1) 
+            ?
+             _.chain(allFlows).values().head().keys().reduce((flows, period)=>{ 
+                flows[period]={}; 
+                return flows; 
+            }, {}).value() 
+            : 
+            genFlows(start, end, "d")
+        
         if (allFlows) {
             allFlows.forEach(flows => {
                 // filter out none listed accounts
@@ -1012,6 +1018,11 @@
         $('td', $tr).first().off("click", handler)
     }
 
+    function mergeFlows(flows) {
+        return _.reduce(flows, (merged, flow, day) => {
+            return mergeFlow(merged, flow)
+        },{})
+    }
 
     function refreshWindows() {
 
@@ -1028,22 +1039,24 @@
                 if (allFlows.paths[index].length == 1)
                     level = 0;
 
-                appendRow($tableEnd, allFlows.contracts[index], allFlows.allChunkedRowupFlows[index], allFlows.paths[index].split(".").pop(), level, allFlows.paths[index], "rollup", true, allFlows.aggregateCounts[index], allFlows.immediateChildren && allFlows.immediateChildren.length, allFlows.hasDetail[index])
+                appendRow($tableEnd, allFlows.contracts[index], allFlows.allChunkedRowupFlows[index],mergeFlows( allFlows.allChunkedRowupFlows[index]), allFlows.paths[index].split(".").pop(), level, allFlows.paths[index], "rollup", true, allFlows.aggregateCounts[index], allFlows.immediateChildren && allFlows.immediateChildren.length, allFlows.hasDetail[index])
 
-                appendRow($tableEnd, allFlows.contracts[index], allFlows.allChunkedFlows[index], allFlows.paths[index].split(".").pop(), level, allFlows.paths[index], "detail", true, allFlows.aggregateCounts[index], allFlows.immediateChildren && allFlows.immediateChildren.length, allFlows.hasDetail[index])
+                appendRow($tableEnd, allFlows.contracts[index], allFlows.allChunkedFlows[index],mergeFlows(allFlows.allChunkedFlows[index]), allFlows.paths[index].split(".").pop(), level, allFlows.paths[index], "detail", true, allFlows.aggregateCounts[index], allFlows.immediateChildren && allFlows.immediateChildren.length, allFlows.hasDetail[index])
             })
         }
 
         {
             allAcctflows.accounts.forEach((flows, index) => {
 
-                appendFooter($tableEnd, allAcctflows.accounts[index], allAcctflows.allChunkedFlows[index], allAcctflows.paths[index])
+                appendFooter($tableEnd, allAcctflows.accounts[index], allAcctflows.allChunkedFlows[index], mergeFlows(allAcctflows.allChunkedFlows[index]), allAcctflows.paths[index])
 
             })
 
         }
+        let totalFlows = genRollupFlows(start, end, allAcctflows.allChunkedFlows, undefined, targetCurrency) 
 
-        appendFooter($tableEnd, { unit: targetCurrency }, genAccountLine(allflowsg.allFlows, start, end, {}, targetCurrency, windowSize), "Totals")
+        // let totalFlows = genAccountLine(allflowsg.allFlows, start, end, {}, targetCurrency, windowSize)
+        appendFooter($tableEnd, { unit: targetCurrency }, totalFlows, mergeFlows(totalFlows), "Totals", true )
 
         function createTable(windowedSeq) {
             $('#flows').empty();
@@ -1097,12 +1110,14 @@
                 $header.append($('<td>').text(day.split('-')[0])
                     .css("border", "1px solid #000"));
             })
+            $header.append($('<td>').text("Total")
+                .css("border", "1px solid #000"));
 
 
             return $table
         }
 
-        function appendRow($appendPoint, targetContract, windowedFlows, contractName, level, path, cssClass, show, aggregateCount, hasChildren, hasDetail) {
+        function appendRow($appendPoint, targetContract, windowedFlows, total, contractName, level, path, cssClass, show, aggregateCount, hasChildren, hasDetail) {
 
             let $tr = $('<tr>')
                 .data("path", path)
@@ -1111,7 +1126,6 @@
                 .data("hasChildren", aggregateCount)
                 .data("contract", targetContract)
                 .data("hasDetail", hasDetail)
-
                 .appendTo($appendPoint)
                 //.on("click", toggle)
                 .addClass(cssClass)
@@ -1176,6 +1190,29 @@
                     );
                 })
 
+            if (cssClass == 'detail') 
+                _.each([total], (wind, day) => {
+                    $tr.append($('<td>')
+                       .append($('<span>').text(wind.amount))
+                        .css("border", "1px solid #000")
+                        .css("padding-left", ' ' + (level * 10) + "px")
+                        .css("background-color", "white")
+                    );
+                })
+                else
+                _.each([total], (wind, day) => {
+                    $tr.append($('<td>')
+                        .append($('<span>').text(wind.in))
+                        .append($('<br>'))
+                        .append($('<span>').text(wind.out))
+                        .append($('<br>'))
+                       .append($('<span>').text(wind.amount))
+                        .css("border", "1px solid #000")
+                        .css("padding-left", ' ' + (level * 10) + "px")
+                        .css("background-color", "white")
+                    );
+                })
+
             if (show)
                 $tr.show();
             else
@@ -1183,9 +1220,14 @@
 
         }
 
-        function appendFooter($appendPoint, targetContract, windowedFlows, contractName) {
+        function appendFooter($appendPoint, targetContract, windowedFlows, total, contractName, isTotalLine) {
 
-            let $tr = $('<tr>').appendTo($appendPoint).css("background-color", "yellow")
+            let $tr = $('<tr>').appendTo($appendPoint)
+    
+            if (isTotalLine)
+                $tr .css("background-color", "white")
+            else
+                $tr .css("background-color", "yellow")
 
             $tr.append($('<td>').text(''))
             $tr.append($('<td>').text(contractName)
@@ -1209,6 +1251,32 @@
                     .append($('<br>'))
                     .append($bal = $('<span>').text(" (" + (wind.balance ? wind.balance : '0') + ")"))
                     .css("border", "1px solid #000")
+                );
+
+                if (wind.oldBalance !== undefined) {
+                    $bal.css("color", "black")
+                    $bal.css("font-weight", "bold")
+                }
+
+                if (wind.negative !== undefined) {
+                    $bal.css("color", "red")
+                    $bal.css("font-weight", "bold")
+                }
+            })
+
+            _.each([total], (wind, day) => {
+                let $td;
+                $tr.append(
+                    $('<td>')
+                    .append($('<span>').text(wind.in))
+                    .append($('<br>'))
+                    .append($('<span>').text(wind.out))
+                    .append($('<br>'))
+                    .append($('<span>').text(wind.amount))
+                    .append($('<br>'))
+                    .append($bal = $('<span>').text(" (" + (wind.balance ? wind.balance : '0') + ")"))
+                    .css("border", "1px solid #000")
+                    .css("background-color", "white")
                 );
 
                 if (wind.oldBalance !== undefined) {
