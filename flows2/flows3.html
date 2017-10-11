@@ -38,6 +38,7 @@
         return result
     }
 
+  
     function getAllAccountNames(normalizedAcccounts) {
         let accountNames = []
         walkPojo(normalizedAcccounts, (account, name) => {
@@ -150,25 +151,32 @@
     // contract,start,end,unit=>genFlows=>flows{day:{ amount, unit, account },...}
     function genFlows(start, end, rythm, normalizedContract) {
         let flows = {}
-        if (normalizedContract && normalizedContract.start > start)
-            start = normalizedContract.start
-        if (normalizedContract && normalizedContract.end < end)
-            end = normalizedContract.end
+        let contractStart=start
+        let contractEnd=end
+        if (normalizedContract && normalizedContract.start)
+            contractStart = normalizedContract.start
+        if (normalizedContract && normalizedContract.end )
+            contractEnd = normalizedContract.end
         if (normalizedContract && !rythm)
             rythm = normalizedContract && normalizedContract.rythm
 
+        end = contractEnd<end?contractEnd:end 
+        start = contractStart
+
         if (rythm) {
-            let current = start
+            let current = contractStart
             let next;
             let parsedRythm = parseRythm(rythm)
 
             while (current <= end) {
-                let flow = {}
+                if (start<=current) {
+                    let flow = {}
 
-                flow.amount = normalizedContract && normalizedContract.amount
-                flow.unit = normalizedContract && normalizedContract.unit
-                flow.account = normalizedContract && normalizedContract.account
-                flows[current] = flow;
+                    flow.amount = normalizedContract && normalizedContract.amount
+                    flow.unit = normalizedContract && normalizedContract.unit
+                    flow.account = normalizedContract && normalizedContract.account
+                    flows[current] = flow;
+                }
 
                 for (i = 0; i < parsedRythm.length; i++) {
                     next = moment(current, 'YYYYMMDD').add(1, parsedRythm.rythm).format('YYYYMMDD')
@@ -219,6 +227,12 @@
             current = next
         }
         return chunk
+    }
+    function round2(value) {
+        return Math.round(value * 100) / 100
+    }
+    function round(value) {
+        return Math.round(value)
     }
     function mergeFlow(oldFlow, flow, unit) {
         let merged = {}
@@ -722,9 +736,13 @@
     }
 
     function mergeFlows(flows) {
-        return _.reduce(flows, (merged, flow, day) => {
+        let count=0
+        let mergedFlow = _.reduce(flows, (merged, flow, day) => {
+            count++
             return mergeFlow(merged, flow)
         },{})
+        mergedFlow.average=round(mergedFlow.amount/count)
+        return mergedFlow
     }
 
     function refreshWindows() {
@@ -909,6 +927,8 @@
                         .append($('<span>').text(wind.out))
                         .append($('<br>'))
                        .append($('<span>').text(wind.amount))
+                        .append($('<br>'))
+                       .append($('<span>').text(wind.average))
                         .css("border", "1px solid #000")
                         .css("padding-left", ' ' + (level * 10) + "px")
                         .css("background-color", "white")
