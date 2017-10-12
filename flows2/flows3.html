@@ -17,6 +17,11 @@
     <script type="text/javascript" src="/Users/paulgettel/Dropbox/data.js"></script>
     <script type="text/javascript">
     // todo: 
+    // manual refresh button
+    // always show rollups unless leaf
+    // if rollups and not both in and out, just show net, not in and out
+    // work on color, font, ux coding of structure of display
+    // add file load button and saving of last path to local storage 
     // zoom in gestures: pop up with/jump to stack for one level of detail or 2 more: M -> w or -> day explode 
     //     https://www.w3schools.com/howto/howto_js_popup.asp
     // screen splitting a la excel 
@@ -580,7 +585,8 @@
         unit: null,
         inherited: [],
         contract: "",
-        transferAccount: ""
+        transferAccount: "",
+        calc: [],
     }
     const prototypeAccount = {
         unit: null,
@@ -656,20 +662,20 @@
             let myPath = $tr.data("path")
             let hasChildren = $tr.data("aggregateCount")
 
-            if (path && (!myPath || !myPath.startsWith(path))) return
+            if (!myPath || path && (!myPath || !myPath.startsWith(path))) return
 
             let myIsDetail = $tr.hasClass("detail")
             let contract = $tr.data("contract")
 
+            let isLeaf = myIsDetail && !hasChildren
             let show = false
             if (myIsDetail && isContract(contract))
                 show = true
-            else if (!myIsDetail && !isContract(contract))
+            else if (!myIsDetail && hasChildren>1)
                 show = true
             else
                 show = false
 
-            let isLeaf = myIsDetail && !hasChildren
             if (show && !isLeaf)
                 addExpandHandler($tr, collapse, "-")
 
@@ -705,7 +711,7 @@
             let show = false
             if (myIsDetail && myIsContract && (level <= myLevel && level + levels >= myLevel))
                 show = true
-            else if (!myIsDetail && !myIsContract && (level <= myLevel && level + levels >= myLevel))
+            else if (!myIsDetail && (!myIsContract && hasChildren>1) && (level <= myLevel && level + levels >= myLevel))
                 show = true
             else
                 show = false
