@@ -18,7 +18,7 @@
     <script type="text/javascript">
     // todo: 
     // manual refresh button
-    // always show rollups unless leaf
+    // auto calc ammortization ruckbildung
     // if rollups and not both in and out, just show net, not in and out
     // work on color, font, ux coding of structure of display
     // add file load button and saving of last path to local storage 
@@ -410,10 +410,30 @@
         }
     }
 
+    // source, key, level, path, res, parent
+    function normalizeCalc(contract, prop, level, path, res, parent) {
+        if (!isContract(contract)) return 
+        if (contract.calc) {
+            if (contract.calc.startsWith("amortauto:")) {
+                if (contract.calc.split(":")[1]=="../") {
+                    // calc : parent amount: period - div by my period 
+                    let amount = parent.amount
+                    let costPeriod = parent.rythm
+                    // 
+                    let myAmount = amount / 12;
+                    contract.amount = round2(myAmount)
+                }
+                else
+                    throw "unknown path : "+contract.calc
+            }
+        }
+    }
+
     function normaliseContracts(contracts, contractProto) {
         contracts = inherit(contracts, {}, contractProto, true)
         walkPojo(contracts, normalizeDates)
         walkPojo(contracts, normalizeAmount)
+        walkPojo(contracts, normalizeCalc)
         walkPojo(contracts, normalizeTransfers(contracts))
         return contracts
     }
@@ -537,7 +557,7 @@
         return destination
     }
 
-    function walkPojo(source, iterator, key, level, path) {
+    function walkPojo(source, iterator, key, level, path, parent) {
 
         if (level === undefined)
             level = 0
@@ -549,12 +569,12 @@
         let res;
         for (var property in source) {
             if (typeof source[property] === "object") {
-                let subres = walkPojo(source[property], iterator, property, level + 1, subPath)
+                let subres = walkPojo(source[property], iterator, property, level + 1, subPath, source)
                 if (subres !== undefined)
                     res = (res || []).concat(Array.isArray(subres) ? subres : [subres])
             }
         }
-        res = iterator(source, key, level, path, res)
+        res = iterator(source, key, level, path, res, parent)
         if (res !== undefined && !Array.isArray(res))
             res = [res]
         return res
@@ -905,15 +925,20 @@
                 })
                 else
                 _.each(windowedFlows, (wind, day) => {
-                    $tr.append($('<td>')
-                        .append($('<span>').text(wind.in))
+                    let $td = $('<td>')
+                    if (wind.in && wind.out) {
+                        $td.append($('<span>').text("in:"+wind.in))
                         .append($('<br>'))
-                        .append($('<span>').text(wind.out))
-                        .append($('<br>'))
+                        .append($('<span>').text("out:"+wind.out))
+                        .append($('<br>'))                        
+                    }
+
+                    $tr.append($td
                        .append($('<span>').text(wind.amount))
                         .css("border", "1px solid #000")
                         .css("padding-left", ' ' + (level * 10) + "px")
                     );
+
                 })
 
             if (cssClass == 'detail') 
@@ -927,14 +952,18 @@
                 })
                 else
                 _.each([total], (wind, day) => {
-                    $tr.append($('<td>')
-                        .append($('<span>').text(wind.in))
+                    let $td = $('<td>')
+                    if (wind.in && wind.out) {
+                        $td
+                        .append($('<span>').text("in:"+wind.in))
                         .append($('<br>'))
-                        .append($('<span>').text(wind.out))
-                        .append($('<br>'))
+                        .append($('<span>').text("out:"+wind.out))
+                        .append($('<br>'))                        
+                    }
+                    $tr.append($td
                        .append($('<span>').text(wind.amount))
                         .append($('<br>'))
-                       .append($('<span>').text(wind.average))
+                       .append($('<span>').text("avg:"+wind.average))
                         .css("border", "1px solid #000")
                         .css("padding-left", ' ' + (level * 10) + "px")
                         .css("background-color", "white")
@@ -968,17 +997,20 @@
             })
 
             _.each(windowedFlows, (wind, day) => {
-                let $td;
-                $tr.append(
-                    $('<td>')
-                    .append($('<span>').text(wind.in))
+                let $td=$('<td>')
+
+                if (wind.in && wind.out) {
+                    $td
+                    .append($('<span>').text("in:"+wind.in))
                     .append($('<br>'))
-                    .append($('<span>').text(wind.out))
+                    .append($('<span>').text("out:"+wind.out))
                     .append($('<br>'))
-                    .append($('<span>').text(wind.amount))
+                }
+
+                $tr.append($td.append($('<span>').text(wind.amount))
                     .append($('<br>'))
                     .append($bal = $('<span>').text(" (" + (wind.balance ? wind.balance : '0') + ")"))
-                    .css("border", "1px solid #000")
+                    .css("border", "1px solid #000")                
                 );
 
                 if (wind.oldBalance !== undefined) {
@@ -993,15 +1025,20 @@
             })
 
             _.each([total], (wind, day) => {
-                let $td;
-                $tr.append(
-                    $('<td>')
-                    .append($('<span>').text(wind.in))
+                let $td=$('<td>')
+
+                if (wind.in && wind.out) {
+                    $td
+                    .append($('<span>').text("in:"+wind.in))
                     .append($('<br>'))
-                    .append($('<span>').text(wind.out))
+                    .append($('<span>').text("out:"+wind.out))
                     .append($('<br>'))
                     .append($('<span>').text(wind.amount))
                     .append($('<br>'))
+                   } 
+
+                $tr.append(
+                    $td
                     .append($bal = $('<span>').text(" (" + (wind.balance ? wind.balance : '0') + ")"))
                     .css("border", "1px solid #000")
                     .css("background-color", "white")
