@@ -153,6 +153,21 @@
         return res
     }
 
+    function parseRythmNext(rythm, current, period) {
+        let parsedRythm = parseRythm(rythm)
+
+        for (j = 0; j < period; j++) {
+            for (i = 0; i < parsedRythm.length; i++) {
+                next = moment(current, 'YYYYMMDD').add(1, parsedRythm.rythm).format('YYYYMMDD')
+                if (next == current) { // in case moment duration/rythm code is incorrect:moment returns same date
+                    throw "constant current date :" + current + " rythm: " + rythm
+                }
+                current = next;
+            }
+        }
+        return current 
+    }
+
     // contract,start,end,unit=>genFlows=>flows{day:{ amount, unit, account },...}
     function genFlows(start, end, rythm, normalizedContract) {
         let flows = {}
@@ -392,7 +407,7 @@
             return
         normalizeDate(contract, "start")
         normalizeDate(contract, "end")
-    }
+    } 
 
     function normalizeDate(contract, prop) {
         // set start
@@ -412,21 +427,21 @@
 
     // source, key, level, path, res, parent
     function normalizeCalc(contract, prop, level, path, res, parent) {
-        if (!isContract(contract)) return 
-        if (contract.calc) {
-            if (contract.calc.startsWith("amortauto:")) {
-                if (contract.calc.split(":")[1]=="../") {
-                    // calc : parent amount: period - div by my period 
-                    let amount = parent.amount
-                    let costPeriod = parent.rythm
-                    // 
-                    let myAmount = amount / 12;
-                    contract.amount = round2(myAmount)
-                }
-                else
-                    throw "unknown path : "+contract.calc
+        if (!isContract(contract)) return  
+        //if (typeof contract.amount == "string" ) {
+            if (contract.calc== "auto:match:..") {
+                // calc : parent amount: period - div by my period 
+                let end = parseRythmNext(parent.rythm,parent.start,  1)
+                let amount = parent.amount
+ 
+                let numberPeriods = moment(end, "YYYYMMDD").diff( parent.start, contract.rythm, true)
+                let myAmount = amount / numberPeriods;
+                contract.amount = round2(myAmount)
             }
-        }
+            // else {
+            //     throw "unknown path : "+contract.calc
+            // }
+        //}
     }
 
     function normaliseContracts(contracts, contractProto) {
