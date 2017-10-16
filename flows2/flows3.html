@@ -876,12 +876,29 @@
                 .append($('<td>').text("name")
                     .css("border", "1px solid #000"));
 
+            let $header1 = $('#firstTd')
+
+            $header1
+                //.after($('<td>')
+                    .text("+-").on("click", expandmax)
+                .after($('<td>').text("name")
+                    .css("border", "1px solid #000"));
+
             _.each(contractProto, (value, prop) => {
                 if (value == null)
                     $header.append($('<td>').text(prop)
                         .css("border", "1px solid #000"));
 
             })
+            _.each(contractProto, (value, prop) => {
+                if (value == null)
+                    $header1.after($('<td>').text(prop)
+                        .css("border", "1px solid #000"));
+
+            })
+
+            let $header2 = $('#divHeader')
+
             _.each(windowedSeq, (wind, day) => {
                 $header.append($('<td>').text(day.split('-')[0])
                     .css("border", "1px solid #000"));
@@ -889,6 +906,12 @@
             $header.append($('<td>').text("Total")
                 .css("border", "1px solid #000"));
 
+            _.each(windowedSeq, (wind, day) => {
+                $header2.append($('<td>').text(day.split('-')[0])
+                    .css("border", "1px solid #000"));
+            })
+            $header2.append($('<td>').text("Total")
+                .css("border", "1px solid #000"));
 
             return $table
         }
@@ -920,13 +943,28 @@
             } else {
 
             }
+
+            let $leftRow = $('<tr>')
+
             $tr.append(
                 $('<td>')
                 .text(symbol)
                 .addClass('expand/collapse')
             )
 
+            $leftRow.append(
+                $('<td>')
+                .text(symbol)
+                .addClass('expand/collapse')
+            )
+
             $tr.append($('<td>')
+                .text((contractName ? contractName : ""))
+                .css("padding-left", ' ' + (level * 10) + "px")
+                .css("border", "1px solid #000")
+            );
+
+            $leftRow.append($('<td>')
                 .text((contractName ? contractName : ""))
                 .css("padding-left", ' ' + (level * 10) + "px")
                 .css("border", "1px solid #000")
@@ -944,6 +982,21 @@
                     }
                 }
             })
+
+            _.each(contractProto, (value, prop) => {
+                if (value == null) {
+                    let $td;
+                    $leftRow.append($td = $('<td>').text(targetContract[prop])
+                        .css("border", "1px solid #000")
+                        .css("padding-left", ' ' + (level * 10) + "px")
+                    );
+                    if (targetContract && targetContract.inherited && targetContract.inherited.indexOf(prop) != -1) {
+                        $td.css("background-color", "lightgrey")
+                    }
+                }
+            })
+
+            let $rightRow = $('<tr>')
 
             if (cssClass == 'detail') 
                 _.each(windowedFlows, (wind, day) => {
@@ -964,6 +1017,32 @@
                     }
 
                     $tr.append($td
+                       .append($('<span>').text(wind.amount))
+                        .css("border", "1px solid #000")
+                        .css("padding-left", ' ' + (level * 10) + "px")
+                    );
+
+                })
+
+            if (cssClass == 'detail') 
+                _.each(windowedFlows, (wind, day) => {
+                    $rightRow.append($('<td>')
+                       .append($('<span>').text(wind.amount))
+                        .css("border", "1px solid #000")
+                        .css("padding-left", ' ' + (level * 10) + "px")
+                    );
+                })
+                else
+                _.each(windowedFlows, (wind, day) => {
+                    let $td = $('<td>')
+                    if (wind.in && wind.out) {
+                        $td.append($('<span>').text("in:"+wind.in))
+                        .append($('<br>'))
+                        .append($('<span>').text("out:"+wind.out))
+                        .append($('<br>'))                        
+                    }
+
+                    $rightRow.append($td
                        .append($('<span>').text(wind.amount))
                         .css("border", "1px solid #000")
                         .css("padding-left", ' ' + (level * 10) + "px")
@@ -1000,10 +1079,51 @@
                     );
                 })
 
+            if (cssClass == 'detail') 
+                _.each([total], (wind, day) => {
+                    $rightRow.append($('<td>')
+                       .append($('<span>').text(wind.amount))
+                        .css("border", "1px solid #000")
+                        .css("padding-left", ' ' + (level * 10) + "px")
+                        .css("background-color", "white")
+                    );
+                })
+                else
+                _.each([total], (wind, day) => {
+                    let $td = $('<td>')
+                    if (wind.in && wind.out) {
+                        $td
+                        .append($('<span>').text("in:"+wind.in))
+                        .append($('<br>'))
+                        .append($('<span>').text("out:"+wind.out))
+                        .append($('<br>'))                        
+                    }
+                    $rightRow.append($td
+                       .append($('<span>').text(wind.amount))
+                        .append($('<br>'))
+                       .append($('<span>').text("avg:"+wind.average))
+                        .css("border", "1px solid #000")
+                        .css("padding-left", ' ' + (level * 10) + "px")
+                        .css("background-color", "white")
+                    );
+                })
+
             if (show)
                 $tr.show();
             else
                 $tr.hide();
+
+            if (show)
+                $leftRow.show();
+            else
+                $leftRow.hide();
+            $leftRow.appendTo( $('#firstcol'))
+
+            if (show)
+                $rightRow.show();
+            else
+                $rightRow.hide();
+            $rightRow.appendTo( $('#table_div'))
 
         }
 
@@ -1109,6 +1229,38 @@
 
 <body>
     <div id="flows"> </div>
+
+<table cellspacing="0" cellpadding="0" border="0" >
+  <tr>
+    <td id="firstTd"> header
+    </td>
+    <td>
+      <div id="divHeader" style="overflow:hidden;width:400px;">
+        <table cellspacing="0" cellpadding="0" border="1" >
+          <tr id="divHeader" >
+          </tr>
+        </table>
+      </div>
+    </td>
+  </tr>
+  <tr>
+  
+    <td valign="top">
+      <div id="firstcol" style="overflow: scroll;height:80px" onscroll="fnScroll1()">
+        <table id="firstcol" width="400px" cellspacing="0" cellpadding="0" border="1" >
+        </table>
+      </div>
+    </td>
+    
+    <td valign="top">
+      <div id="table_div" style="overflow: scroll;width:500px;height:100px;position:relative" onscroll="fnScroll()" >
+        <table id="table_div" width="800px" cellspacing="0" cellpadding="0" border="1" >
+
+        </table>
+      </div>
+    </td>
+  </tr>
+</table>
 </body>
 
 </html>
