@@ -42,7 +42,7 @@
         return result
     }
 
-  
+
     function getAllAccountNames(normalizedAcccounts) {
         let accountNames = []
         walkPojo(normalizedAcccounts, (account, name) => {
@@ -97,15 +97,13 @@
 
     function genRollupFlows(start, end, allFlows, accountNames, unit) {
         let startOfFlows = _.chain(allFlows).values().head().keys().head().value()
-        let rolledUpFlows = (startOfFlows && startOfFlows.split("-").length>1) 
-            ?
-             _.chain(allFlows).values().head().keys().reduce((flows, period)=>{ 
-                flows[period]={}; 
-                return flows; 
-            }, {}).value() 
-            : 
+        let rolledUpFlows = (startOfFlows && startOfFlows.split("-").length > 1) ?
+            _.chain(allFlows).values().head().keys().reduce((flows, period) => {
+                flows[period] = {};
+                return flows;
+            }, {}).value() :
             genFlows(start, end, "d")
-        
+
         if (allFlows) {
             allFlows.forEach(flows => {
                 // filter out none listed accounts
@@ -164,22 +162,22 @@
                 current = next;
             }
         }
-        return current 
+        return current
     }
 
     // contract,start,end,unit=>genFlows=>flows{day:{ amount, unit, account },...}
     function genFlows(start, end, rythm, normalizedContract) {
         let flows = {}
-        let contractStart=start
-        let contractEnd=end
+        let contractStart = start
+        let contractEnd = end
         if (normalizedContract && normalizedContract.start)
             contractStart = normalizedContract.start
-        if (normalizedContract && normalizedContract.end )
+        if (normalizedContract && normalizedContract.end)
             contractEnd = normalizedContract.end
         if (normalizedContract && !rythm)
             rythm = normalizedContract && normalizedContract.rythm
 
-        end = contractEnd<end?contractEnd:end 
+        end = contractEnd < end ? contractEnd : end
         start = contractStart
 
         if (rythm) {
@@ -188,7 +186,7 @@
             let parsedRythm = parseRythm(rythm)
 
             while (current <= end) {
-                if (start<=current) {
+                if (start <= current) {
                     let flow = {}
 
                     flow.amount = normalizedContract && normalizedContract.amount
@@ -247,12 +245,15 @@
         }
         return chunk
     }
+
     function round2(value) {
         return Math.round(value * 100) / 100
     }
+
     function round(value) {
         return Math.round(value)
     }
+
     function mergeFlow(oldFlow, flow, unit) {
         let merged = {}
         merged.unit = unit || oldFlow.unit || flow && flow.unit
@@ -288,26 +289,25 @@
         }
 
         if (flow && flow.in) {
-            let inamount=convert(flow.in, flow.unit, merged.unit)
+            let inamount = convert(flow.in, flow.unit, merged.unit)
             merged.in += inamount
             merged.in = Math.round(merged.in * 100) / 100
         }
-         
+
         if (flow && flow.out) {
-            let out=convert(flow.out, flow.unit, merged.unit)
+            let out = convert(flow.out, flow.unit, merged.unit)
             merged.out += out
             merged.out = Math.round(merged.out * 100) / 100
         }
-         
+
         if (flow && flow.amount) {
-            let amount=convert(flow.amount, flow.unit, merged.unit)
+            let amount = convert(flow.amount, flow.unit, merged.unit)
             merged.amount += amount
             merged.amount = Math.round(merged.amount * 100) / 100
-            if (amount>0 && typeof flow.in === "undefined") {
+            if (amount > 0 && typeof flow.in === "undefined") {
                 merged.in += amount
                 merged.in = Math.round(merged.in * 100) / 100
-            }
-            else if ( typeof flow.out === "undefined") {
+            } else if (typeof flow.out === "undefined") {
                 merged.out += amount
                 merged.out = Math.round(merged.out * 100) / 100
             }
@@ -406,7 +406,7 @@
             return
         normalizeDate(contract, "start")
         normalizeDate(contract, "end")
-    } 
+    }
 
     function normalizeDate(contract, prop) {
         // set start
@@ -425,36 +425,36 @@
     }
 
     function normalizeCalc(contract, prop, level, path, res, parent) {
-        if (!isContract(contract)) return  
+        if (!isContract(contract)) return
         //if (typeof contract.amount == "string" ) {
-            if (contract.calc== "auto:match:..") {
-                // calc : parent amount: period - div by my period 
-                let end = parseRythmNext(parent.rythm, parent.start,  1)
-                let amount = parent.amount
- 
-                let numberPeriods = moment(end, "YYYYMMDD").diff( parent.start, contract.rythm, true)
-                let myAmount = amount / numberPeriods;
-                contract.amount = round2(myAmount)
-            }
-            // else {
-            //     throw "unknown path : "+contract.calc
-            // }
+        if (contract.calc == "auto:match:..") {
+            // calc : parent amount: period - div by my period 
+            let end = parseRythmNext(parent.rythm, parent.start, 1)
+            let amount = parent.amount
+
+            let numberPeriods = moment(end, "YYYYMMDD").diff(parent.start, contract.rythm, true)
+            let myAmount = amount / numberPeriods;
+            contract.amount = round2(myAmount)
+        }
+        // else {
+        //     throw "unknown path : "+contract.calc
+        // }
         //}
     }
 
     // source, key, level, path, res, parent
     function autoamotization(contract, prop, level, path, res, parent) {
-        if (!isContract(contract)) return  
+        if (!isContract(contract)) return
         let parsedRythm = parseRythm(contract.rythm)
-        if (parsedRythm.rythm=="y" && parsedRythm.length>1) {
+        if (parsedRythm.rythm == "y" && parsedRythm.length > 1) {
             // calc : parent amount: period - div by my period 
             let end = parseRythmNext(parsedRythm.rythm, parent.start, parsedRythm.length)
             let amount = contract.amount
 
-            let newContract = { contract: "amortizations", rythm:"M", start: contract.start, transferAccount: contract.account, account:parent.account, }
-            let numberPeriods = moment(end, "YYYYMMDD").diff( contract.start, newContract.rythm, true)
+            let newContract = { contract: "amortizations", rythm: "M", start: contract.start, transferAccount: contract.account, account: parent.account, }
+            let numberPeriods = moment(end, "YYYYMMDD").diff(contract.start, newContract.rythm, true)
             let myAmount = amount / numberPeriods;
-            newContract.amount=round2(myAmount)
+            newContract.amount = round2(myAmount)
             contract.amortizations = newContract
         }
     }
@@ -486,7 +486,7 @@
                 let allFlows = genAllContractLines(normalisedContracts, last.day, start, 'd')
 
                 let rolledUpFlows = genRollupFlows(last.day, start, allFlows.allFlows, [accountName], account.unit)
-                    
+
                 let bals = {}
                 bals[last.day] = last.balance
                 let actualFlows = actualizeFlows(rolledUpFlows, bals)
@@ -496,7 +496,8 @@
             }
         }
     }
-    function isTransfer(transfers, property) { return property=="transfers"}
+
+    function isTransfer(transfers, property) { return property == "transfers" }
 
     function normaliseAccounts(accounts, start, end, normalisedContracts, prototypeAccount) {
 
@@ -506,12 +507,12 @@
         walkPojo(normalizedAcccounts, implementTransfers)
 
         function implementTransfers(transfers, property, level, path, res) {
-            if (!isTransfer(transfers, property)) return 
-            _.each(transfers, transfer=>{
-                let toAccount=transfer.account
-                let fromAccount=_.findLast(path.split("."))
+            if (!isTransfer(transfers, property)) return
+            _.each(transfers, transfer => {
+                let toAccount = transfer.account
+                let fromAccount = _.findLast(path.split("."))
                 // create contracts: transfers.accountfrom, transfers.accountto
-                normalisedContracts.transfers=normalisedContracts.transfers || {}
+                normalisedContracts.transfers = normalisedContracts.transfers || {}
                 normalisedContracts.transfers[toAccount] = normalisedContracts.transfers[toAccount] || {}
                 let index = _.keys(normalisedContracts.transfers[toAccount]).length
                 normalisedContracts.transfers[toAccount][index] = clone(transfer, true)
@@ -523,7 +524,7 @@
                 normalisedContracts.transfers[fromAccount][index].amount = -transfer.amount
                 normalisedContracts.transfers[fromAccount][index].account = fromAccount
 
-            
+
             })
         }
 
@@ -642,15 +643,13 @@
         unit: null,
         balances: [],
         inherited: [],
-        transfers:[]
+        transfers: []
     }
     </script>
     <script type="text/javascript">
- 
+    let normalisedContracts = (test) ? normaliseContracts(testContracts, contractProto) : normaliseContracts(contracts, contractProto)
 
-    let normalisedContracts = (test)?normaliseContracts(testContracts, contractProto):normaliseContracts(contracts, contractProto)
-
-    let normalizedAcccounts = (test)?normaliseAccounts(testAccounts, start, end, normalisedContracts, prototypeAccount):normaliseAccounts(accounts, start, end, normalisedContracts, prototypeAccount)
+    let normalizedAcccounts = (test) ? normaliseAccounts(testAccounts, start, end, normalisedContracts, prototypeAccount) : normaliseAccounts(accounts, start, end, normalisedContracts, prototypeAccount)
 
 
     // console.log(JSON.stringify(allAcctflows, null, 2))
@@ -721,7 +720,7 @@
             let show = false
             if (myIsDetail && isContract(contract))
                 show = true
-            else if (!myIsDetail && hasChildren>1)
+            else if (!myIsDetail && hasChildren > 1)
                 show = true
             else
                 show = false
@@ -739,7 +738,7 @@
     }
 
     function expandone(levelsIn) {
-        let levels = typeof levelsIn === "number" ? levelsIn:1
+        let levels = typeof levelsIn === "number" ? levelsIn : 1
         let $tr = $(this).closest('tr')
         let path = $tr.data("path")
         let level = $tr.data("level")
@@ -761,7 +760,7 @@
             let show = false
             if (myIsDetail && myIsContract && (level <= myLevel && level + levels >= myLevel))
                 show = true
-            else if (!myIsDetail && (!myIsContract && hasChildren>1) && (level <= myLevel && level + levels >= myLevel))
+            else if (!myIsDetail && (!myIsContract && hasChildren > 1) && (level <= myLevel && level + levels >= myLevel))
                 show = true
             else
                 show = false
@@ -792,12 +791,12 @@
     }
 
     function mergeFlows(flows) {
-        let count=0
+        let count = 0
         let mergedFlow = _.reduce(flows, (merged, flow, day) => {
             count++
             return mergeFlow(merged, flow)
-        },{})
-        mergedFlow.average=round(mergedFlow.amount/count)
+        }, {})
+        mergedFlow.average = round(mergedFlow.amount / count)
         return mergedFlow
     }
 
@@ -816,9 +815,9 @@
                 if (allFlows.paths[index].length == 1)
                     level = 0;
 
-                appendRow($tableEnd, allFlows.contracts[index], allFlows.allChunkedRowupFlows[index],mergeFlows( allFlows.allChunkedRowupFlows[index]), allFlows.paths[index].split(".").pop(), level, allFlows.paths[index], "rollup", true, allFlows.aggregateCounts[index], allFlows.immediateChildren && allFlows.immediateChildren.length, allFlows.hasDetail[index])
+                appendRow($tableEnd, allFlows.contracts[index], allFlows.allChunkedRowupFlows[index], mergeFlows(allFlows.allChunkedRowupFlows[index]), allFlows.paths[index].split(".").pop(), level, allFlows.paths[index], "rollup", true, allFlows.aggregateCounts[index], allFlows.immediateChildren && allFlows.immediateChildren.length, allFlows.hasDetail[index])
 
-                appendRow($tableEnd, allFlows.contracts[index], allFlows.allChunkedFlows[index],mergeFlows(allFlows.allChunkedFlows[index]), allFlows.paths[index].split(".").pop(), level, allFlows.paths[index], "detail", true, allFlows.aggregateCounts[index], allFlows.immediateChildren && allFlows.immediateChildren.length, allFlows.hasDetail[index])
+                appendRow($tableEnd, allFlows.contracts[index], allFlows.allChunkedFlows[index], mergeFlows(allFlows.allChunkedFlows[index]), allFlows.paths[index].split(".").pop(), level, allFlows.paths[index], "detail", true, allFlows.aggregateCounts[index], allFlows.immediateChildren && allFlows.immediateChildren.length, allFlows.hasDetail[index])
             })
         }
 
@@ -830,45 +829,45 @@
             })
 
         }
-        let totalFlows = genRollupFlows(start, end, allAcctflows.allChunkedFlows, undefined, targetCurrency) 
+        let totalFlows = genRollupFlows(start, end, allAcctflows.allChunkedFlows, undefined, targetCurrency)
 
-        appendFooter($tableEnd, { unit: targetCurrency }, totalFlows, mergeFlows(totalFlows), "Totals", true )
+        appendFooter($tableEnd, { unit: targetCurrency }, totalFlows, mergeFlows(totalFlows), "Totals", true)
 
         function createTable(windowedSeq) {
-            $('#flows').empty();
+            $('#flowscontrol').empty();
 
-            $('<div>').text("window:").append($input = $('<input>').val(windowSize).on('blur', (e) => {
+            $('<span>').text("window:").append($input = $('<input>').val(windowSize).on('blur', (e) => {
                     windowSize = e.target.value;
                     refreshWindows()
                 }))
-                .appendTo($('#flows'))
+                .appendTo($('#flowscontrol'))
 
-            $('<div>').text("start:").append($input = $('<input>').val(start).on('blur', (e) => {
+            $('<span>').text("start:").append($input = $('<input>').val(start).on('blur', (e) => {
                     start = "" + e.target.value;
                     refreshWindows()
                 }))
-                .appendTo($('#flows'))
+                .appendTo($('#flowscontrol'))
 
-            $('<div>').text("end:").append($input = $('<input>').val(end).on('blur', (e) => {
+            $('<span>').text("end:").append($input = $('<input>').val(end).on('blur', (e) => {
                     end = "" + e.target.value;
                     refreshWindows()
                 }))
-                .appendTo($('#flows'))
+                .appendTo($('#flowscontrol'))
 
-            // $('<div>').text("targetAccounts:"+targetAccounts)
-            //         .appendTo($('#flows'))
+            // $('<span>').text("targetAccounts:"+targetAccounts)
+            //         .appendTo($('#flowscontrol'))
 
-            $('<div>').text("currency:").append($('<input>').val(targetCurrency).on('blur', (e) => {
+            $('<span>').text("currency:").append($('<input>').val(targetCurrency).on('blur', (e) => {
                     targetCurrency = e.target.value;
                     refreshWindows()
                 }))
-                .appendTo($('#flows'))
+                .appendTo($('#flowscontrol'))
 
             let $table = $('<table>')
             $table.css("border", "1px solid #000");
             let $header = $('<tr>').appendTo(
                 $table
-                .appendTo($('#flows'))
+//                .appendTo($('#flowsold'))
             )
 
             $header
@@ -876,12 +875,12 @@
                 .append($('<td>').text("name")
                     .css("border", "1px solid #000"));
 
-            let $header1 = $('#firstTd')
+            let $header1 = $('<tr>')
 
             $header1
-                //.after($('<td>')
-                    .text("+-").on("click", expandmax)
-                .after($('<td>').text("name")
+                .append($('<td>')
+                    .text("+-").on("click", expandmax))
+                .append($('<td>').text("name")
                     .css("border", "1px solid #000"));
 
             _.each(contractProto, (value, prop) => {
@@ -892,28 +891,38 @@
             })
             _.each(contractProto, (value, prop) => {
                 if (value == null)
-                    $header1.after($('<td>').text(prop)
+                    $header1.append($('<td>').text(prop)
                         .css("border", "1px solid #000"));
 
             })
 
-            let $header2 = $('#divHeader')
+            let $header2 = $('<tr>')
 
             _.each(windowedSeq, (wind, day) => {
                 $header.append($('<td>').text(day.split('-')[0])
-                    .css("border", "1px solid #000"));
+                    .css("border", "1px solid #000")
+                );
             })
             $header.append($('<td>').text("Total")
                 .css("border", "1px solid #000"));
 
             _.each(windowedSeq, (wind, day) => {
                 $header2.append($('<td>').text(day.split('-')[0])
-                    .css("border", "1px solid #000"));
+                    .css("border", "1px solid #000")
+                    .addClass("tableHeader")
+                );
             })
-            $header2.append($('<td>').text("Total")
-                .css("border", "1px solid #000"));
 
-            return $table
+            let $header3 = $('<tr>')
+            $header3.append($('<td>').text("Total")
+                .css("border", "1px solid #000")
+                .addClass("tableHeader")
+            );
+
+            $header1.appendTo($('#leftHeaderData'))
+            $header2.appendTo($('#rightHeaderData'))
+            $header3.appendTo($('#endHeaderData'))
+           return $table
         }
 
         function appendRow($appendPoint, targetContract, windowedFlows, total, contractName, level, path, cssClass, show, aggregateCount, hasChildren, hasDetail) {
@@ -929,9 +938,10 @@
                 //.on("click", toggle)
                 .addClass(cssClass)
 
-            let factor=30
-            let offset=130
-            $tr.css("background-color","rgb(" + (offset+level*factor) + "," + (offset+level*factor) + "," + (offset+level*factor) + ")")
+            let factor = 30
+            let offset = 130
+            let cssColor =  "rgb(" + (offset + level * factor) + "," + (offset + level * factor) + "," + (offset + level * factor) + ")"
+           $tr.css("background-color",cssColor)
 
             let symbol = "+"
             if (cssClass == 'detail') {
@@ -956,6 +966,7 @@
                 $('<td>')
                 .text(symbol)
                 .addClass('expand/collapse')
+                .addClass("tableFirstCol")
             )
 
             $tr.append($('<td>')
@@ -968,6 +979,7 @@
                 .text((contractName ? contractName : ""))
                 .css("padding-left", ' ' + (level * 10) + "px")
                 .css("border", "1px solid #000")
+                .addClass("tableFirstCol")
             );
 
             _.each(contractProto, (value, prop) => {
@@ -989,6 +1001,7 @@
                     $leftRow.append($td = $('<td>').text(targetContract[prop])
                         .css("border", "1px solid #000")
                         .css("padding-left", ' ' + (level * 10) + "px")
+                        .addClass("tableFirstCol")
                     );
                     if (targetContract && targetContract.inherited && targetContract.inherited.indexOf(prop) != -1) {
                         $td.css("background-color", "lightgrey")
@@ -998,110 +1011,111 @@
 
             let $rightRow = $('<tr>')
 
-            if (cssClass == 'detail') 
+            if (cssClass == 'detail')
                 _.each(windowedFlows, (wind, day) => {
                     $tr.append($('<td>')
-                       .append($('<span>').text(wind.amount))
+                        .append($('<span>').text(wind.amount))
                         .css("border", "1px solid #000")
                         .css("padding-left", ' ' + (level * 10) + "px")
                     );
                 })
-                else
+            else
                 _.each(windowedFlows, (wind, day) => {
                     let $td = $('<td>')
                     if (wind.in && wind.out) {
-                        $td.append($('<span>').text("in:"+wind.in))
-                        .append($('<br>'))
-                        .append($('<span>').text("out:"+wind.out))
-                        .append($('<br>'))                        
+                        $td.append($('<span>').text("in:" + wind.in))
+                            .append($('<br>'))
+                            .append($('<span>').text("out:" + wind.out))
+                            .append($('<br>'))
                     }
 
                     $tr.append($td
-                       .append($('<span>').text(wind.amount))
+                        .append($('<span>').text(wind.amount))
                         .css("border", "1px solid #000")
                         .css("padding-left", ' ' + (level * 10) + "px")
                     );
 
                 })
 
-            if (cssClass == 'detail') 
+            if (cssClass == 'detail')
                 _.each(windowedFlows, (wind, day) => {
                     $rightRow.append($('<td>')
-                       .append($('<span>').text(wind.amount))
+                        .append($('<span>').text(wind.amount))
                         .css("border", "1px solid #000")
                         .css("padding-left", ' ' + (level * 10) + "px")
                     );
                 })
-                else
+            else
                 _.each(windowedFlows, (wind, day) => {
                     let $td = $('<td>')
                     if (wind.in && wind.out) {
-                        $td.append($('<span>').text("in:"+wind.in))
-                        .append($('<br>'))
-                        .append($('<span>').text("out:"+wind.out))
-                        .append($('<br>'))                        
+                        $td.append($('<span>').text("in:" + wind.in))
+                            .append($('<br>'))
+                            .append($('<span>').text("out:" + wind.out))
+                            .append($('<br>'))
                     }
 
                     $rightRow.append($td
-                       .append($('<span>').text(wind.amount))
+                        .append($('<span>').text(wind.amount))
                         .css("border", "1px solid #000")
                         .css("padding-left", ' ' + (level * 10) + "px")
                     );
 
                 })
 
-            if (cssClass == 'detail') 
+            if (cssClass == 'detail')
                 _.each([total], (wind, day) => {
                     $tr.append($('<td>')
-                       .append($('<span>').text(wind.amount))
+                        .append($('<span>').text(wind.amount))
                         .css("border", "1px solid #000")
                         .css("padding-left", ' ' + (level * 10) + "px")
                         .css("background-color", "white")
                     );
                 })
-                else
+            else
                 _.each([total], (wind, day) => {
                     let $td = $('<td>')
                     if (wind.in && wind.out) {
                         $td
-                        .append($('<span>').text("in:"+wind.in))
-                        .append($('<br>'))
-                        .append($('<span>').text("out:"+wind.out))
-                        .append($('<br>'))                        
+                            .append($('<span>').text("in:" + wind.in))
+                            .append($('<br>'))
+                            .append($('<span>').text("out:" + wind.out))
+                            .append($('<br>'))
                     }
                     $tr.append($td
-                       .append($('<span>').text(wind.amount))
+                        .append($('<span>').text(wind.amount))
                         .append($('<br>'))
-                       .append($('<span>').text("avg:"+wind.average))
+                        .append($('<span>').text("avg:" + wind.average))
                         .css("border", "1px solid #000")
                         .css("padding-left", ' ' + (level * 10) + "px")
                         .css("background-color", "white")
                     );
                 })
 
-            if (cssClass == 'detail') 
+            let $endRow = $('<tr>')
+            if (cssClass == 'detail')
                 _.each([total], (wind, day) => {
-                    $rightRow.append($('<td>')
-                       .append($('<span>').text(wind.amount))
+                    $endRow.append($('<td>')
+                        .append($('<span>').text(wind.amount))
                         .css("border", "1px solid #000")
                         .css("padding-left", ' ' + (level * 10) + "px")
                         .css("background-color", "white")
                     );
                 })
-                else
+            else
                 _.each([total], (wind, day) => {
                     let $td = $('<td>')
                     if (wind.in && wind.out) {
                         $td
-                        .append($('<span>').text("in:"+wind.in))
-                        .append($('<br>'))
-                        .append($('<span>').text("out:"+wind.out))
-                        .append($('<br>'))                        
+                            .append($('<span>').text("in:" + wind.in))
+                            .append($('<br>'))
+                            .append($('<span>').text("out:" + wind.out))
+                            .append($('<br>'))
                     }
-                    $rightRow.append($td
-                       .append($('<span>').text(wind.amount))
+                    $endRow.append($td
+                        .append($('<span>').text(wind.amount))
                         .append($('<br>'))
-                       .append($('<span>').text("avg:"+wind.average))
+                        .append($('<span>').text("avg:" + wind.average))
                         .css("border", "1px solid #000")
                         .css("padding-left", ' ' + (level * 10) + "px")
                         .css("background-color", "white")
@@ -1111,34 +1125,60 @@
             if (show)
                 $tr.show();
             else
-                $tr.hide();
+               $tr.hide();
+
+            show = true 
 
             if (show)
                 $leftRow.show();
             else
                 $leftRow.hide();
-            $leftRow.appendTo( $('#firstcol'))
+            $leftRow.appendTo($('#leftData')).css("background-color",cssColor)
 
             if (show)
                 $rightRow.show();
             else
                 $rightRow.hide();
-            $rightRow.appendTo( $('#table_div'))
+            $rightRow.appendTo($('#rightData')).css("background-color",cssColor)
+
+            if (show)
+                $endRow.show();
+            else
+                $endRow.hide();
+            $endRow.appendTo($('#endData')).css("background-color",cssColor)
 
         }
 
         function appendFooter($appendPoint, targetContract, windowedFlows, total, contractName, isTotalLine) {
 
             let $tr = $('<tr>').appendTo($appendPoint)
-    
-            if (isTotalLine)
-                $tr .css("background-color", "white")
-            else
-                $tr .css("background-color", "yellow")
+
+            let $footer1 = $('<tr>')
+            let $footer2 = $('<tr>')
+            let $footer3 = $('<tr>')
+
+
+            if (isTotalLine) {
+                $tr.css("background-color", "white")
+                $footer1.css("background-color", "white")
+                $footer2.css("background-color", "white")
+                $footer3.css("background-color", "white")
+            }
+            else {
+                $tr.css("background-color", "yellow")
+                $footer1.css("background-color", "yellow")
+                $footer2.css("background-color", "yellow")
+                $footer3.css("background-color", "yellow")
+            }
 
             $tr.append($('<td>').text(''))
             $tr.append($('<td>').text(contractName)
                 .css("border", "1px solid #000"));
+
+            $footer1.append($('<td>').text(''))
+            $footer1.append($('<td>').text(contractName)
+                .css("border", "1px solid #000"));
+
             _.each(contractProto, (value, prop) => {
                 if (value == null)
                     $tr.append($('<td>').text(targetContract[prop])
@@ -1146,21 +1186,56 @@
 
             })
 
+            _.each(contractProto, (value, prop) => {
+                if (value == null)
+                    $footer1.append($('<td>').text(targetContract[prop])
+                        .css("border", "1px solid #000"));
+
+            })
+
             _.each(windowedFlows, (wind, day) => {
-                let $td=$('<td>')
+                let $td = $('<td>')
 
                 if (wind.in && wind.out) {
                     $td
-                    .append($('<span>').text("in:"+wind.in))
-                    .append($('<br>'))
-                    .append($('<span>').text("out:"+wind.out))
-                    .append($('<br>'))
+                        .append($('<span>').text("in:" + wind.in))
+                        .append($('<br>'))
+                        .append($('<span>').text("out:" + wind.out))
+                        .append($('<br>'))
                 }
 
                 $tr.append($td.append($('<span>').text(wind.amount))
                     .append($('<br>'))
                     .append($bal = $('<span>').text(" (" + (wind.balance ? wind.balance : '0') + ")"))
-                    .css("border", "1px solid #000")                
+                    .css("border", "1px solid #000")
+                );
+
+                if (wind.oldBalance !== undefined) {
+                    $bal.css("color", "black")
+                    $bal.css("font-weight", "bold")
+                }
+
+                if (wind.negative !== undefined) {
+                    $bal.css("color", "red")
+                    $bal.css("font-weight", "bold")
+                }
+            })
+
+            _.each(windowedFlows, (wind, day) => {
+                let $td = $('<td>')
+
+                if (wind.in && wind.out) {
+                    $td
+                        .append($('<span>').text("in:" + wind.in))
+                        .append($('<br>'))
+                        .append($('<span>').text("out:" + wind.out))
+                        .append($('<br>'))
+                }
+
+                $footer2.append($td.append($('<span>').text(wind.amount))
+                    .append($('<br>'))
+                    .append($bal = $('<span>').text(" (" + (wind.balance ? wind.balance : '0') + ")"))
+                    .css("border", "1px solid #000")
                 );
 
                 if (wind.oldBalance !== undefined) {
@@ -1175,17 +1250,17 @@
             })
 
             _.each([total], (wind, day) => {
-                let $td=$('<td>')
+                let $td = $('<td>')
 
                 if (wind.in && wind.out) {
                     $td
-                    .append($('<span>').text("in:"+wind.in))
-                    .append($('<br>'))
-                    .append($('<span>').text("out:"+wind.out))
-                    .append($('<br>'))
-                    .append($('<span>').text(wind.amount))
-                    .append($('<br>'))
-                   } 
+                        .append($('<span>').text("in:" + wind.in))
+                        .append($('<br>'))
+                        .append($('<span>').text("out:" + wind.out))
+                        .append($('<br>'))
+                        .append($('<span>').text(wind.amount))
+                        .append($('<br>'))
+                }
 
                 $tr.append(
                     $td
@@ -1205,62 +1280,299 @@
                 }
             })
 
+            _.each([total], (wind, day) => {
+                let $td = $('<td>')
+
+                if (wind.in && wind.out) {
+                    $td
+                        .append($('<span>').text("in:" + wind.in))
+                        .append($('<br>'))
+                        .append($('<span>').text("out:" + wind.out))
+                        .append($('<br>'))
+                        .append($('<span>').text(wind.amount))
+                        .append($('<br>'))
+                }
+
+                $footer3.append(
+                    $td
+                    .append($bal = $('<span>').text(" (" + (wind.balance ? wind.balance : '0') + ")"))
+                    .css("border", "1px solid #000")
+                    .css("background-color", "white")
+                );
+
+                if (wind.oldBalance !== undefined) {
+                    $bal.css("color", "black")
+                    $bal.css("font-weight", "bold")
+                }
+
+                if (wind.negative !== undefined) {
+                    $bal.css("color", "red")
+                    $bal.css("font-weight", "bold")
+                }
+            })
+
+            if (isTotalLine) {
+               $footer1.appendTo($('#leftFooterTotalData'))
+               $footer2.appendTo($('#rightFooterTotalData'))
+               $footer3.appendTo($('#endFooterTotalData'))
+            }
+            else {
+               $footer1.appendTo($('#leftFooterData'))
+               $footer2.appendTo($('#rightFooterData'))
+               $footer3.appendTo($('#endFooterData'))
+
+            }
         }
 
-        expandone(2)
+
+        //expandone(2)
+
+        adjustTable($('#flows'))
 
     }
 
     $(refreshWindows)
+
+
+    function adjustTable($anchor) {
+
+        function toArray($selector) {
+            let res = []
+            $selector.each((i, elem) => {
+                res.push(elem)
+            })
+            return res
+        }
+
+        function doTableSizing($anchor) {
+            let alltds = []; 
+            let $rowsleft = $('.headerminorleft tr,.dataminorleft tr,.footerminorleft tr,.footerminortotalleft tr', $anchor);
+            let $rowsright = $('.headerminorright tr,.dataminorright tr,.footerminorright tr,.footerminortotalright tr', $anchor);
+            let $rowsend = $('.headerminorend tr,.dataminorend tr,.footerminorend tr,.footerminortotalend tr', $anchor);
+            let col, row, max = 0;
+            let numrows = $rowsleft.length;
+            if ($rowsleft.length!=$rowsright.length || $rowsleft.length!=$rowsend.length)
+                throw "unequal rows "
+            for (row = 0; row < numrows; row++) {
+                let max = 0;
+                let tds = toArray($('td', $rowsleft.get(row))).concat(toArray($('td', $rowsright.get(row)))).concat(toArray($('td', $rowsend.get(row))))
+                tds.forEach(function(elem) {
+                    max = Math.max($(elem).height(), max);
+                    alltds.push(elem)
+                })
+                tds.forEach(function(elem) {
+                    $(elem).height(max);
+                })
+            }
+            let numcols = alltds.length / numrows;
+            for (max = 0, col = 0; col < numcols; col++) {
+                if (col==numcols-1)
+                    console.log("here")
+                for (max = 0, row = 0; row < numrows; row++) {
+                    let index = col + row * numcols;
+                    max = Math.max($(alltds[index]).width(), max);
+                    if (max>300)
+                        console.log("there")
+                }
+                for (row = 0; row < numrows; row++) {
+                    let index = col + row * numcols;
+                    $(alltds[index]).width(max);
+                }
+            }
+        }
+
+        function fnScroll() {
+            $('.headerminorright>div,.footerminorright>div,.footerminortotalright>div', $anchor).scrollLeft($('.dataminorright>div', $anchor).scrollLeft());
+            $('.dataminorend>div,.dataminorleft>div').scrollTop($('.dataminorright>div', $anchor).scrollTop());
+        };
+
+        function fnScrolll() {
+            $('.dataminorend>div,.dataminorright>div').scrollTop($('.dataminorleft>div', $anchor).scrollTop());
+        };
+
+        function fnScrolle() {
+            $('.dataminorleft>div,.dataminorright>div').scrollTop($('.dataminorend>div', $anchor).scrollTop());
+        };
+
+        function fnScrollh() {
+            $('.dataminorright>div,.footerminorright>div,.footerminortotalright>div', $anchor).scrollLeft($('.headerminorright>div', $anchor).scrollLeft());
+        };
+        function fnScrollhf() {
+            $('.dataminorright>div,.headerminorright>div,.footerminortotalright>div', $anchor).scrollLeft($('.footerminorright>div', $anchor).scrollLeft());
+            $('.footerminorend>div,.footerminorleft>div').scrollTop($('.footerminorright>div', $anchor).scrollTop());
+        };
+        function fnScrolllf() {
+            $('.footerminorend>div,.footerminorright>div').scrollTop($('.footerminorleft>div', $anchor).scrollTop());
+        };
+        function fnScrolllfe() {
+            $('.footerminorleft>div,.footerminorright>div').scrollTop($('.footerminorend>div', $anchor).scrollTop());
+        };
+        function fnScrollht() {
+            $('.dataminorright>div,.footerminorright>div,.headerminorright>div', $anchor).scrollLeft($('.footerminortotalright>div', $anchor).scrollLeft());
+        };
+
+        $('td', $anchor)
+            .attr('nowrap', 'nowrap');
+
+        $('.dataminorright>div', $anchor).on('scroll', fnScroll);
+        $('.dataminorleft>div', $anchor).on('scroll', fnScrolll);
+        $('.dataminorend>div', $anchor).on('scroll', fnScrolle);
+
+        $('.headerminorright>div', $anchor).on('scroll', fnScrollh);
+        $('.footerminorright>div', $anchor).on('scroll', fnScrollhf);
+        $('.footerminorleft>div', $anchor).on('scroll', fnScrolllf);
+        $('.footerminorend>div', $anchor).on('scroll', fnScrolllfe);
+        $('.footerminortotalright>div', $anchor).on('scroll', fnScrollht);
+
+        $('.dataminorleft>div,.dataminorright>div', $anchor)
+            .css('overflow', 'scroll')
+            .css('position', 'relative'); 
+        $('.headerminorleft>div,.headerminorright>div,.footerminorleft>div,.footerminorright>div,.footerminortotalright>div,.footerminorend>div', $anchor)
+            .css('overflow', 'scroll')
+            .css('position', 'relative'); 
+
+        doTableSizing($anchor);
+
+        function setMaxSize() {
+            let offset = $('.dataminorleft>div').offset().left + $('.dataminorleft>div').width()+ $('.dataminorend>div').width();
+            let wwidth = $(window).width();
+            let leftover = wwidth - offset * 1.05;
+            $('.headerminorright>div,.dataminorright>div,.footerminorright>div,.footerminorright>div,.footerminortotalright>div', $anchor).css('max-width', leftover);
+
+            offset = $('.headerminorleft>div').offset().top + $('.headerminorleft>div').height()+ $('.footerminortotalleft>div').height();
+            let wheight = $(window).height();
+            leftover = wheight - offset * 1.05;
+            let sharefraction =0.75
+            let share = leftover * sharefraction
+            let accountshare = leftover * (1.0-sharefraction)
+            $('.dataminorleft>div,.dataminorright>div,.dataminorend>div', $anchor).css('max-height', share).css('height', share);
+            $('.footerminorleft>div,.footerminorright>div,.footerminorend>div', $anchor).css('max-height', accountshare).css('height', accountshare);
+        };
+        setMaxSize();
+        doTableSizing($anchor);
+        let rtime;
+        let timeout = false;
+        let delta = 200;
+
+        function resizeTimer() {
+            rtime = new Date();
+            if (timeout === false) {
+                timeout = true;
+                setTimeout(resizeend, delta);
+            }
+        };
+
+        $(window).resize(resizeTimer);
+
+        function resizeend() {
+            if (new Date() - rtime < delta) {
+                setTimeout(resizeend, delta);
+            } else {
+                //alert('Done resizing');
+                setMaxSize();
+                timeout = false;
+            }
+        }
+
+    };
     </script>
     <style type="text/css">
     .rollup {
-          font-weight: bold;
+        font-weight: bold;
     }
-    .detail {     
+
+    .detail {
         text-decoration: underline;
     }
-    /*        .detail { display: none; }
-        .rollup { display: ''; }
-        .detail { display: ''; }
-*/
     </style>
 </head>
 
 <body>
-    <div id="flows"> </div>
+    <div id="flowscontrol"> </div>
 
-<table cellspacing="0" cellpadding="0" border="0" >
-  <tr>
-    <td id="firstTd"> header
-    </td>
-    <td>
-      <div id="divHeader" style="overflow:hidden;width:400px;">
-        <table cellspacing="0" cellpadding="0" border="1" >
-          <tr id="divHeader" >
-          </tr>
-        </table>
-      </div>
-    </td>
-  </tr>
-  <tr>
-  
-    <td valign="top">
-      <div id="firstcol" style="overflow: scroll;height:80px" onscroll="fnScroll1()">
-        <table id="firstcol" width="400px" cellspacing="0" cellpadding="0" border="1" >
-        </table>
-      </div>
-    </td>
-    
-    <td valign="top">
-      <div id="table_div" style="overflow: scroll;width:500px;height:100px;position:relative" onscroll="fnScroll()" >
-        <table id="table_div" width="800px" cellspacing="0" cellpadding="0" border="1" >
-
-        </table>
-      </div>
-    </td>
-  </tr>
-</table>
+    <table id="flows" cellspacing="0" cellpadding="0" border="0">
+        <tr>
+            <td id="firstTd" class="headerminorleft">
+                <div style="overflow:hidden;">
+                    <table id="leftHeaderData" cellspacing="0" cellpadding="0" border="1">
+                    </table>
+                </div>
+            </td>
+            <td class="headerminorright">
+                <div id="divHeader" style="overflow:hidden;">
+                    <table id="rightHeaderData" cellspacing="0" cellpadding="0" border="1">
+                    </table>
+                </div>
+            </td>
+            <td class="headerminorend">
+                <div id="divHeaderEnd" style="overflow:hidden;">
+                    <table id="endHeaderData" cellspacing="0" cellpadding="0" border="1">
+                    </table>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td valign="top" class="dataminorleft">
+                <div id="firstcol" style="overflow: scroll;height:500px">
+                    <table id="leftData"  cellspacing="0" cellpadding="0" border="1">
+                    </table>
+                </div>
+            </td>
+            <td valign="top" class="dataminorright">
+                <div id="table_div" style="overflow: scroll;height:500px;position:relative">
+                    <table id="rightData"  cellspacing="0" cellpadding="0" border="1">
+                    </table>
+                </div>
+            </td>
+            <td valign="top" class="dataminorend">
+                <div id="table_div_end" style="overflow: scroll;height:500px;position:relative">
+                    <table id="endData" cellspacing="0" cellpadding="0" border="1">
+                    </table>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td id="footerTd" class="footerminorleft">
+                <div style="overflow:hidden;">
+                    <table id="leftFooterData" cellspacing="0" cellpadding="0" border="1">
+                    </table>
+                </div>
+            </td>
+            <td class="footerminorright">
+                <div id="divFooter" style="overflow:hidden;">
+                    <table id="rightFooterData" cellspacing="0" cellpadding="0" border="1">
+                    </table>
+                </div>
+            </td>
+            <td class="footerminorend">
+                <div id="divFooterEnd" style="overflow:hidden;">
+                    <table id="endFooterData" cellspacing="0" cellpadding="0" border="1">
+                    </table>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td id="footerTotalTd" class="footerminortotalleft">
+                <div style="overflow:hidden;">
+                    <table id="leftFooterTotalData" cellspacing="0" cellpadding="0" border="1">
+                    </table>
+                </div>
+            </td>
+            <td class="footerminortotalright">
+                <div id="divFooterTotal" style="overflow:hidden;">
+                    <table id="rightFooterTotalData" cellspacing="0" cellpadding="0" border="1">
+                    </table>
+                </div>
+            </td>
+            <td class="footerminortotalend">
+                <div id="divFooterTotalEnd" style="overflow:hidden;">
+                    <table id="endFooterTotalData" cellspacing="0" cellpadding="0" border="1">
+                    </table>
+                </div>
+            </td>
+        </tr>
+    </table>
+    <div id="flowsold"> </div>
 </body>
 
 </html>
