@@ -1000,6 +1000,10 @@
                 if (value == null) {
                     let $td;
                     let contractvalue = targetContract[prop]
+                    let flow1=_.chain(windowedFlows).values().head().value()
+                    if (flow1 && flow1[prop]!== undefined && (prop=="account" || prop=="unit")) {
+                        contractvalue= flow1[prop]
+                    }
                     if (Array.isArray(contractvalue)) {
                         if (contractvalue.length>1) 
                             contractvalue = contractvalue[0]+",..."
@@ -1017,7 +1021,16 @@
             _.each(contractProto, (value, prop) => {
                 if (value == null) {
                     let $td;
-                    $leftRow.append($td = $('<td>').text(targetContract[prop])
+                    let contractvalue = targetContract[prop]
+                    let flow1=_.chain(windowedFlows).values().head().value()
+                    if (flow1 && flow1[prop]!== undefined && (prop=="account" || prop=="unit")) {
+                        contractvalue= flow1[prop]
+                    }
+                    if (Array.isArray(contractvalue)) {
+                        if (contractvalue.length>1) 
+                            contractvalue = contractvalue.join("<br/>")
+                    }
+                    $leftRow.append($td = $('<td>').html(contractvalue)
                         .css("border", "1px solid #000")
                         .css("padding-left", ' ' + (level * 10) + "px")
                         .addClass("tableFirstCol")
