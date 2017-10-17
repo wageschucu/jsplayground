@@ -280,36 +280,36 @@
 
         let newBalance = (flow && flow.balance) || (oldFlow && oldFlow.balance)
         if (newBalance !== undefined) {
-            merged.balance = newBalance
+            merged.balance = round2(newBalance)
         }
 
         newBalance = (flow && flow.oldBalance) || (oldFlow && oldFlow.oldBalance)
         if (newBalance !== undefined) {
-            merged.oldBalance = newBalance
+            merged.oldBalance = round2(newBalance)
         }
 
         if (flow && flow.in) {
             let inamount = convert(flow.in, flow.unit, merged.unit)
             merged.in += inamount
-            merged.in = Math.round(merged.in * 100) / 100
+            merged.in = round2(merged.in) 
         }
 
         if (flow && flow.out) {
             let out = convert(flow.out, flow.unit, merged.unit)
             merged.out += out
-            merged.out = Math.round(merged.out * 100) / 100
+            merged.out = round2(merged.out ) 
         }
 
         if (flow && flow.amount) {
             let amount = convert(flow.amount, flow.unit, merged.unit)
             merged.amount += amount
-            merged.amount = Math.round(merged.amount * 100) / 100
+            merged.amount = round2(merged.amount ) 
             if (amount > 0 && typeof flow.in === "undefined") {
                 merged.in += amount
-                merged.in = Math.round(merged.in * 100) / 100
+                merged.in = round2(merged.in ) 
             } else if (typeof flow.out === "undefined") {
                 merged.out += amount
-                merged.out = Math.round(merged.out * 100) / 100
+                merged.out = round2(merged.out )
             }
         }
 
@@ -388,7 +388,8 @@
                 .unshift(contract.contract)
                 .push(key)
                 .reduce((current, pathElement) => {
-                    current[pathElement] = current[pathElement] || {};
+                    //current[pathElement] = current[pathElement] || {};
+                    current[pathElement] = inherit({}, current, contractProto, true)
                     return current[pathElement]
                 }, contracts)
             clone(contract, true, transferContract)
@@ -531,9 +532,9 @@
         return normalizedAcccounts
     }
     // deep copy of undefined attributes
-    function inherit(source, parent, prototype, deep) {
+    function inherit(source, parent, prototype, deep, target) {
         // filter parent 
-        let target = {}
+         target = target || {}
 
         // copy source props
         //   if prop in prototype: deep copy/clone 
@@ -573,7 +574,10 @@
     // deep copy, but not overwriting dest leaves
     function clone(source, deep, destination) {
         if (!destination)
-            destination = {}
+            if (Array.isArray(source))
+                destination = []
+            else
+                destination = {}
         for (var property in source) {
             if (typeof source[property] === "object" && deep) {
                 if (Array.isArray(source[property]))
@@ -693,10 +697,7 @@
             if (show)
                 addExpandHandler($tr, expandone, "+")
 
-            if (show)
-                $tr.show();
-            else
-                $tr.hide()
+            showRow($tr, show);
         })
         removeExpandHandler($tr, collapse, "-")
 
@@ -728,10 +729,7 @@
             if (show && !isLeaf)
                 addExpandHandler($tr, collapse, "-")
 
-            if (show)
-                $tr.show();
-            else
-                $tr.hide()
+            showRow($tr, show);
         })
         removeExpandHandler($tr, expandmax)
 
@@ -772,18 +770,23 @@
                     addExpandHandler($tr, expandone, "+")
             }
 
-            if (show)
-                $tr.show();
-            else
-                $tr.hide()
+            showRow($tr, show);
         })
         removeExpandHandler($tr, expandone)
 
     }
 
+    function showRow($tr, show) {
+        let row=$('td', $tr).first().data("rownumber")
+        $trs = $('tr[data-rownumber='+row+"]")
+        if (show)
+            $trs.show()
+        else
+           $trs.hide()
+
+    }
     function addExpandHandler($tr, handler, symbol) {
         $('td', $tr).first().on("click", handler).text(symbol)
-
     }
 
     function removeExpandHandler($tr, handler) {
@@ -955,6 +958,17 @@
             }
 
             let $leftRow = $('<tr>')
+            $leftRow
+                .data("path", path)
+                .data("level", level)
+                .data("aggregateCount", aggregateCount)
+                .data("hasChildren", aggregateCount)
+                .data("contract", targetContract)
+                .data("hasDetail", hasDetail)
+                .appendTo($appendPoint)
+                //.on("click", toggle)
+                .addClass(cssClass)
+
 
             $tr.append(
                 $('<td>')
@@ -985,7 +999,12 @@
             _.each(contractProto, (value, prop) => {
                 if (value == null) {
                     let $td;
-                    $tr.append($td = $('<td>').text(targetContract[prop])
+                    let contractvalue = targetContract[prop]
+                    if (Array.isArray(contractvalue)) {
+                        if (contractvalue.length>1) 
+                            contractvalue = contractvalue[0]+",..."
+                    }
+                    $tr.append($td = $('<td>').text(contractvalue)
                         .css("border", "1px solid #000")
                         .css("padding-left", ' ' + (level * 10) + "px")
                     );
@@ -1127,7 +1146,7 @@
             else
                $tr.hide();
 
-            show = true 
+            //show = true 
 
             if (show)
                 $leftRow.show();
@@ -1325,7 +1344,7 @@
         }
 
 
-        //expandone(2)
+        expandone(2)
 
         adjustTable($('#flows'))
 
@@ -1356,6 +1375,10 @@
             for (row = 0; row < numrows; row++) {
                 let max = 0;
                 let tds = toArray($('td', $rowsleft.get(row))).concat(toArray($('td', $rowsright.get(row)))).concat(toArray($('td', $rowsend.get(row))))
+                $($rowsleft.get(row)).attr("data-rownumber", row)
+                $($rowsright.get(row)).attr("data-rownumber", row)
+                $($rowsend.get(row)).attr("data-rownumber", row)
+                $(tds[0]).attr("data-rownumber", row)
                 tds.forEach(function(elem) {
                     max = Math.max($(elem).height(), max);
                     alltds.push(elem)
