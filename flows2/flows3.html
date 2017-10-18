@@ -833,23 +833,37 @@
     function getReconcileInfos(allFlows, wind, day, previousBalanceDate, accountName) {
         let title = ""
         title += " "+day+" "+prettyOldBalance(wind.oldBalance[day])
-        title += " "+_(allFlows.contracts).reduce((indexes, contract,index)=>{
+        let sorted = _(allFlows.contracts).reduce((indexes, contract,index)=>{
              console.log(indexes,contract,index);
               if (isContract(contract) && contract.account==accountName) 
                 indexes.push(index); 
              return indexes
          }
          , [])
-        .reduce((text,index)=>{ 
-            let details = getSpecFlows(day, allFlows.allFlows[index], previousBalanceDate)
-            if (details) {
+        .reduce((list,index)=>{ 
+            let totalFlow = getSpecFlows(day, allFlows.allFlows[index], previousBalanceDate)
+            if (totalFlow)
+                list.push({index:index, totalFlow: totalFlow})
+            return list 
+            },[])
+        
+
+        sorted = _(sorted)
+        .orderBy(["totalFlow"],["asc"])
+        sorted = sorted
+        .reduce((text,list)=>{ 
+            if (list.index) {
+                let index = list.index
                 text += "\n"; 
-                text += " total: "+details; 
+                text += "  "+list.totalFlow; 
                 text += " : "+allFlows.paths[index]; 
                 text += ": "+prettyContract(allFlows.contracts[index]); 
             }
             return text 
             },"")
+
+            title += " "+ sorted
+
          return title   
     }
     function prettyFlow(flow) {
@@ -866,6 +880,9 @@
     }
     function getPreviousBalanceDate(account, firstBalance) {
         return _(account.balances).reduce((max,bal,day)=>{ if(day<firstBalance && (!max || day>max)) max=day; return max},"")
+    }
+    function prettyNegatives(negatives) {
+        return JSON.stringify(negatives, null, 2)
     }
     function refreshWindows() {
 
@@ -1348,15 +1365,17 @@
                                 $bal.css("color", "green")
                             }
                             else {
-                                $bal.css("color", "orange")
+                                $bal.css("color", "red")
                             }
                         }
                     }
                 }
 
                 if (wind.negative !== undefined) {
-                    $bal.css("color", "red")
+                    $bal.css("color", "orange")
                     $bal.css("font-weight", "bold")
+                    // list 
+                    $bal.attr("title",prettyNegatives(wind.negative))
                 }
             })
 
@@ -1386,7 +1405,7 @@
                 }
 
                 if (wind.negative !== undefined) {
-                    $bal.css("color", "red")
+                    $bal.css("color", "orange")
                     $bal.css("font-weight", "bold")
                 }
             })
