@@ -263,7 +263,13 @@
     function round(value) {
         return Math.round(value)
     }
-
+    function extendObject(obj, src) {
+        if (src) {
+            obj = obj || {}
+            Object.keys(src).forEach(function(key) { if (obj[key]===undefined) obj[key] = src[key]; });
+        }
+        return obj;
+    }
     function mergeFlow(oldFlow, flow, unit) {
         let merged = {}
         merged.unit = unit || oldFlow.unit || flow && flow.unit
@@ -293,10 +299,8 @@
             merged.balance = round2(newBalance)
         }
 
-        newBalance = (flow && flow.oldBalance) || (oldFlow && oldFlow.oldBalance)
-        if (newBalance !== undefined) {
-            merged.oldBalance = round2(newBalance)
-        }
+        if (flow && flow.oldBalance || oldFlow && oldFlow.oldBalance)
+            merged.oldBalance = extendObject(oldFlow.oldBalance, flow.oldBalance)
 
         if (flow && flow.in) {
             let inamount = convert(flow.in, flow.unit, merged.unit)
@@ -324,7 +328,7 @@
         }
 
         if (flow && flow.negative || oldFlow && oldFlow.negative)
-            merged.negative = flow.negative || oldFlow.negative
+            merged.negative = extendObject(oldFlow.negative, flow.negative)
 
         return merged
     }
@@ -351,9 +355,13 @@
                 balance += flow.amount
             flow.balance = balance
             if (balances[day] !== undefined) {
-                flow.oldBalance = flow.balance
+                let oldBalance = { balance:flow.balance , }
                 flow.balance = balances[day]
                 balance = balances[day]
+
+                oldBalance.deltaBalance= flow.balance - oldBalance.balance
+                flow.oldBalance = flow.oldBalance || {}
+                flow.oldBalance[day] = oldBalance
             }
             if (flow.balance < 0) {
                 flow.negative = flow.negative || {}
@@ -812,7 +820,53 @@
         mergedFlow.average = round(mergedFlow.amount / count)
         return mergedFlow
     }
+    function prettyContract(contract) {
+        return ""+ contract.amount +", rythm: "+ contract.rythm +(contract.unit?", unit: "+ contract.unit :"")
+    }
 
+    function prettyOldBalance(balance) {
+        return " balance: "+balance.balance+", delta: "+ balance.deltaBalance
+    }
+    //   name
+    //.     date,amount,unit,balance
+    // gather contracts and indexes and flows before day until last oldbalance or begin
+    function getReconcileInfos(allFlows, wind, day, previousBalanceDate, accountName) {
+        let title = ""
+        title += " "+day+" "+prettyOldBalance(wind.oldBalance[day])
+        title += " "+_(allFlows.contracts).reduce((indexes, contract,index)=>{
+             console.log(indexes,contract,index);
+              if (isContract(contract) && contract.account==accountName) 
+                indexes.push(index); 
+             return indexes
+         }
+         , [])
+        .reduce((text,index)=>{ 
+            let details = getSpecFlows(day, allFlows.allFlows[index], previousBalanceDate)
+            if (details) {
+                text += "\n"; 
+                text += " total: "+details; 
+                text += " : "+allFlows.paths[index]; 
+                text += ": "+prettyContract(allFlows.contracts[index]); 
+            }
+            return text 
+            },"")
+         return title   
+    }
+    function prettyFlow(flow) {
+        return " amount: "+flow.amount+(flow.unit?", unit: "+flow.unit:"")+(flow.balance?", balance: "+flow.balance :"")
+    }
+    function getSpecFlows(day, flows,  previousBalanceDate){
+        let totalFlow = _(flows).reduce((totalFlow,flow, flowDate)=>{
+            if (flowDate<day && (!previousBalanceDate || previousBalanceDate<flowDate)) {
+                totalFlow += flow.amount
+            }
+            return totalFlow 
+        }, 0)
+        return totalFlow;
+    }
+    function getPreviousBalanceDate(account, firstBalance) {
+        return _(account.balances).reduce((max,bal,day)=>{ if(day<firstBalance && (!max || day>max)) max=day; return max},"")
+    }
     function refreshWindows() {
 
         let allFlows = genAllContractLines(normalisedContracts, start, end, windowSize)
@@ -837,7 +891,7 @@
         {
             allAcctflows.accounts.forEach((flows, index) => {
 
-                appendFooter($tableEnd, allAcctflows.accounts[index], allAcctflows.allChunkedFlows[index], mergeFlows(allAcctflows.allChunkedFlows[index]), allAcctflows.paths[index])
+                appendFooter($tableEnd, allAcctflows.accounts[index], allAcctflows.allChunkedFlows[index], mergeFlows(allAcctflows.allChunkedFlows[index]), allAcctflows.paths[index], undefined, allFlows)
 
             })
 
@@ -1191,7 +1245,7 @@
 
         }
 
-        function appendFooter($appendPoint, targetContract, windowedFlows, total, contractName, isTotalLine) {
+        function appendFooter($appendPoint, targetContract, windowedFlows, total, contractName, isTotalLine, allFlows) {
 
             let $tr = $('<tr>').appendTo($appendPoint)
 
@@ -1283,6 +1337,21 @@
                 if (wind.oldBalance !== undefined) {
                     $bal.css("color", "black")
                     $bal.css("font-weight", "bold")
+                    // pop up with flows details: contracts/flows since last oldbalance: amount,unit,date,balance
+                    let firstBalance = _(wind.oldBalance).keys().head()
+                    if (!isTotalLine) {
+                        $bal.attr("title", getReconcileInfos(allFlows, wind, firstBalance, getPreviousBalanceDate(targetContract, firstBalance), contractName))
+                    }
+                    if (firstBalance) {
+                        if (Math.abs(wind.oldBalance[firstBalance].deltaBalance)>Math.abs(deltaBalanceThreshold)) {
+                            if (wind.oldBalance[firstBalance].deltaBalance>0) {
+                                $bal.css("color", "green")
+                            }
+                            else {
+                                $bal.css("color", "orange")
+                            }
+                        }
+                    }
                 }
 
                 if (wind.negative !== undefined) {
