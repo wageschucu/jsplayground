@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Flows2</title>
+    <title>Flows3</title>
     <!--     <script type="text/javascript" src="lazy.js"></script>
  -->
     <!-- optional: if you want support for DOM event and AJAX-based sequences: -->
@@ -151,17 +151,33 @@
         return res
     }
 
-    function parseRythmNext(rythm, current, period) {
-        let parsedRythm = parseRythm(rythm)
+    // function parseRythmPeriod(rythm, current, period) {
+    //     let parsedRythm = parseRythm(rythm)
+    //     return  rythmNextPeriod(parsedRythm, current, period) 
+    // }
 
-        for (j = 0; j < period; j++) {
-            for (i = 0; i < parsedRythm.length; i++) {
-                next = moment(current, 'YYYYMMDD').add(1, parsedRythm.rythm).format('YYYYMMDD')
-                if (next == current) { // in case moment duration/rythm code is incorrect:moment returns same date
-                    throw "constant current date :" + current + " rythm: " + rythm
-                }
-                current = next;
+    // function rythmNextPeriod(parsedRythm, current, period) {
+
+    //     for (j = 0; j < period; j++) {
+    //         current = rythmNext(parsedRythm, current)
+    //     }
+    //     return current
+    // }
+
+    function rythmNext(parsedRythm, current) {
+
+        for (i = 0; i < parsedRythm.length; i++) {
+            let next
+            if (parsedRythm.rythm=="o") {
+                next="99991231"
             }
+            else {
+                next = moment(current, 'YYYYMMDD').add(1, parsedRythm.rythm).format('YYYYMMDD')
+            }
+            if (next == current) { // in case moment duration/rythm code is incorrect:moment returns same date
+                throw "constant current date :" + current + " rythm: " + rythm
+            }
+            current = next;
         }
         return current
     }
@@ -195,14 +211,7 @@
                     flow.account = normalizedContract && normalizedContract.account
                     flows[current] = flow;
                 }
-
-                for (i = 0; i < parsedRythm.length; i++) {
-                    next = moment(current, 'YYYYMMDD').add(1, parsedRythm.rythm).format('YYYYMMDD')
-                    if (next == current) { // in case moment duration/rythm code is incorrect:moment returns same date
-                        throw "constant current date :" + current + " rythm: " + rythm
-                    }
-                    current = next;
-                }
+                current=rythmNext(parsedRythm, current)
             }
         }
         return flows
@@ -431,7 +440,7 @@
         //if (typeof contract.amount == "string" ) {
         if (contract.calc == "auto:match:..") {
             // calc : parent amount: period - div by my period 
-            let end = parseRythmNext(parent.rythm, parent.start, 1)
+            let end = rythmNext(parseRythm(parent.rythm), parent.start)
             let amount = parent.amount
 
             let numberPeriods = moment(end, "YYYYMMDD").diff(parent.start, contract.rythm, true)
@@ -450,7 +459,7 @@
         let parsedRythm = parseRythm(contract.rythm)
         if (parsedRythm.rythm == "y" && parsedRythm.length > 1) {
             // calc : parent amount: period - div by my period 
-            let end = parseRythmNext(parsedRythm.rythm, parent.start, parsedRythm.length)
+            let end = rythmNext(parsedRythm, parent.start)
             let amount = contract.amount
 
             let newContract = { contract: "amortizations", rythm: "M", start: contract.start, transferAccount: contract.account, account: parent.account, }
