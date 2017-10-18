@@ -1,0 +1,30 @@
+notes:
+morph parsing
+categorize : match existing category, then add and remove categories
+manipulate? can we make generic merge up: like leaf to parent?
+peel off suffix: match suffix and categories, create tree nodes, move, add and remove categories:source tree -> target tree: template: ??
+peel off prefix: " 
+priorities: pref: prio is adj, then verb 
+loop  prio 1, loop prio 2
+loop: suffixes, the prefixes 
+should we parse as a person reads or what is most efficient from a computational point? 
+historically: (adj:ir ((verb:re stem:verb:sist) verbToAdj:ible) )
+if there are clear tendencies: adj:ir instead of verb:adj then we can indicate them: how to indicate fuzzy categories or fuzziness in a category? 
+
+process prefixes:
+	leaf node, prefixes => abstract node (prefix stem) :  ir source cats(x y -z -a) adjCats(+b -c) stemCats() absCats(function (originalCats) { return absCats; }) 
+	default is: -+ from original cats 
+
+	name, prio, prefixes, prefCats, stemCats, absCats
+
+	2 segment rule: stems must be at least 2 segments long.
+
+	Do I parse from bottom up like we read or top down, back forward?
+		back-forward is the best, no?  
+		no this is not necessarily so: irreverent. => 
+														the adj  (ir ( (re (vere) ) ent) ) cat is
+													 	the noun (ir ( (re (vere) ) ence) ) is
+														the adj  ( (re (vere) ) ent) cat is
+													 	the noun ( (re (vere) ) ence) is
+														the adj  ( (im (port) ) ant) cat is
+													 	the noun ( (im (port) ) ance) is

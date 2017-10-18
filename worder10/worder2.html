@@ -1,0 +1,94 @@
+<!DOCTYPE HTML>
+<html lang="en">
+    <head>
+        <title>worder.js &ndash; Test 1</title>
+        <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<script type="text/javascript" src="jquery-1.8.2.js"></script>
+<script type="text/javascript" src="underscore.js"></script>
+<style type="text/css"> 
+
+/*, .PRP$.focus css dont like the $ ???
+*/
+
+span.word {
+	margin-left:0.25em;
+
+}
+
+span.morph {
+	margin-left:0.0em;
+
+}
+
+span {
+	float:left;
+	margin-bottom:0.5em	;
+	vertical-align: middle;
+	text-align: center;
+	box-align:center;
+}
+.root {
+}
+
+.root .leaf {
+	opacity : 0.3;
+	font-size: 1.3em;
+    text-shadow: 0 0 5px rgba(0,0,0,0.9);
+}
+
+.focus {
+	opacity : 1.0 !important;
+    text-shadow: none !important;
+}
+
+.postFocus {
+	opacity : 1.0 !important;
+    text-shadow: none !important;
+}
+
+.S.focus, .SBAR.focus {
+	background-color: LightGrey;
+}
+.verb.focus, .verb.postFocus {
+	color: green;
+}
+.VP.focus {
+	background-color: LightGreen;
+}
+.noun.focus, .noun.postFocus {
+	color: blue;
+}
+.NP.focus {
+	background-color: LightBlue;
+}
+.adj.focus, .dt.focus, .dt.postFocus, .adj.postFocus {
+	color: red;
+}
+.ADJP.focus {
+	background-color: LightCoral;
+}
+.ADV.focus, .RB.focus {
+	color: OrangeRed;
+}
+.ADVP.focus, .PP.focus {
+	background-color: Khaki;
+}
+.prep.focus, prep.postFocus {
+	color: black;
+}
+.open.focus, .open.postFocus {
+	font-style:italic;
+}
+
+</style>
+</head>
+<body> 
+<span class="test">	
+</span>
+<script type="text/javascript" src="parsemisc.js"></script>
+<script type="text/javascript" src="morphAnalysis.js"></script>
+<script type="text/javascript" src="englishMorphology.js"></script>
+<script type="text/javascript" src="worder2.js"></script>
+</body>
+</html>
+
