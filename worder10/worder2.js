@@ -499,14 +499,10 @@ function walkTreeRecursive($node) {
 
 function processStnfTree(standfordTree) {
 	
-	var node = getStnfNodes( substringBetween( standfordTree.replace(/\s+/g, " ").trim(), "(", ")" ) ) ;
+	var node = processStnfTreeToNode(standfordTree)
 
 	printTree( node );
-
-	morphProcessTree(node, EnglishRecategorizations, EnglishAffixes);
-
-	printTree( node );
-
+	
 	$htmlTree = convertNodeTreeToHtml(node, "span", "categories", abstractClass, leafClass);
 
 	//$('body').append($htmlTree);
@@ -523,6 +519,18 @@ function processStnfTree(standfordTree) {
 	
 }
 
+function processStnfTreeToNode(standfordTree) {
+	
+	var node = getStnfNodes( substringBetween( standfordTree.replace(/\s+/g, " ").trim(), "(", ")" ) ) ;
+
+	//printTree( node );
+
+	morphProcessTree(node, EnglishRecategorizations, EnglishAffixes);
+
+	return node ;
+
+	
+}
 // dev 
 //processStnfTree(testStandfordTree);
 
@@ -532,6 +540,7 @@ $('body')
 	.append($('<div>').text(instructions))
 	.append($('<div>.</div>'))
 	.append('<textarea cols=120 rows=15 id="parseTreeInput" placeholder="enter bracketed parse tree as per standford english parser.">')
+	.append('<textarea cols=120 rows=15 id="parseTreeOutput" >')
 	.append('<div>')
 	.append('<input type="text" value="'+msAbstract+'" id="msAbstract" placeholder="msAbstract"  title="msAbstract"  name="msAbstract">' )
 	.append('<input type="text" value="'+msPerCharacter+'" id="msPerCharacter" placeholder="msPerCharacter"  title="msPerCharacter"  name="msPerCharacter">' )
@@ -562,8 +571,11 @@ $('#show')
 		treeText=$('#parseTreeInput').val();
 		treeText=treeText.replace(/\s+/g, " ").trim();
 		
+		var node = processStnfTreeToNode(treeText)
+		//printTree( node );
+
 		var $root = processStnfTree(treeText);
-		
+		$('#parseTreeOutput').text(stringTree(node))
 		$("*", $root).addClass("focus");
 		
 	})

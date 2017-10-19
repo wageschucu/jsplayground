@@ -57,8 +57,12 @@
             .appendTo($('#flowscontrol'))
 
         $('<span>').text("file path: ")
-            .append($('<input id="filepath">').val(filepath).css("width", "220px"))
+            .append($('<input id="filepath">').val(filepath).css("width", "220px").on('blur', (e) => {
+                filepath = e.target.value;
+                localStorage.setItem(localStorageKeyPrefix + "filepath", filepath)
+            }))
             .appendTo($('#flowscontrol'))
+
         $('<span>')
             .append($('<input type="button">').val("refresh").on('click', ()=>location.reload()))
             .appendTo($('#flowscontrol'))

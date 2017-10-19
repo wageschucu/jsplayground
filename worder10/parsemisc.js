@@ -103,3 +103,18 @@ function printTree(node, level) {
 		printTree(subnode, level);
 	});  
 };
+function stringTree(node, level) {
+	let	text="";
+
+	if (!level) {
+		text="\n-";
+		level = 1; 
+	}
+	text+="\n"+tabs(level++)+node.head;
+	//text+="\n"+node.head;
+	if (node.children) 
+		_.each(node.children, function foo(subnode) {
+		text += stringTree(subnode, level);
+	});  
+	return text 
+};
