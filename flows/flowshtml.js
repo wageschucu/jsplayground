@@ -7,14 +7,15 @@
     // expand path, max/one level
     //   if below expanding: has children&&contract? show detail: show aggregate
     // 
-        let start = '20170101'
-        let end = '20171231'
-        let windowSize = "M"
-        let deltaBalanceThreshold= 200
-        let targetCurrency = "chf"
-        let localStorageKeyFilePath="flowsdatafilepath"
+        let localStorageKeyPrefix="flowsdatakey"
+        let start = localStorage.getItem(localStorageKeyPrefix+"start") ||'20170101'
+        let end = localStorage.getItem(localStorageKeyPrefix+"end") ||'20171231'
+        let windowSize = localStorage.getItem(localStorageKeyPrefix+"windowSize") ||"M"
+        let deltaBalanceThreshold= localStorage.getItem(localStorageKeyPrefix+"deltaBalanceThreshold") ||200
+        let targetCurrency = localStorage.getItem(localStorageKeyPrefix+"targetCurrency") ||"chf"
 
-        let filepath = localStorage.getItem(localStorageKeyFilePath) || "mydata.js"
+        let filepath = localStorage.getItem(localStorageKeyPrefix+"filepath") || "mydata.js"
+        let test
 
         $(createControls)
         
@@ -23,16 +24,19 @@
 
             $('<span>').text("window:").append($input = $('<input>').val(windowSize).on('blur', (e) => {
                     windowSize = e.target.value;
+                    localStorage.setItem(localStorageKeyPrefix+"windowSize", windowSize) 
                 }))
                 .appendTo($('#flowscontrol'))
 
             $('<span>').text("start:").append($input = $('<input>').val(start).on('blur', (e) => {
                     start = "" + e.target.value;
+                    localStorage.setItem(localStorageKeyPrefix+"start", start) 
                 }))
                 .appendTo($('#flowscontrol'))
 
             $('<span>').text("end:").append($input = $('<input>').val(end).on('blur', (e) => {
                     end = "" + e.target.value;
+                    localStorage.setItem(localStorageKeyPrefix+"end", end) 
                 }))
                 .appendTo($('#flowscontrol'))
 
@@ -41,6 +45,7 @@
 
             $('<span>').text("currency:").append($('<input>').val(targetCurrency).on('blur', (e) => {
                     targetCurrency = e.target.value;
+                    localStorage.setItem(localStorageKeyPrefix+"targetCurrency", targetCurrency) 
                 }))
                 .appendTo($('#flowscontrol'))
             $('<span>').text(" ").append($('<input type="button">').val("load").on('click', (e) => {
@@ -57,6 +62,7 @@
                         $(refreshWindows)
                     }
                     script.src=$('#filepath').val()
+                    localStorage.setItem(localStorageKeyPrefix+"filepath", filepath) 
 
                     // script.text = ["console.log('This is from the script');",
                     //                "var script = document.getElementById('testing');",
