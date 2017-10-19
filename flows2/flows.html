@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Flows3</title>
+    <!--     <script type="text/javascript" src="lazy.js"></script>
+ -->
+    <!-- optional: if you want support for DOM event and AJAX-based sequences: -->
+    <!--     <script type="text/javascript" src="lazy.browser.js"></script>
+ -->
+    <script type="text/javascript" src="moment-with-locales.js"></script>
+    <script type="text/javascript" src="lodash.js"></script>
+    <!--     <script type="text/javascript" src="flows2.js"></script>
+ -->
+    <script type="text/javascript" src="jquery-3.2.1.js"></script>
+
+<!--      <script type="text/javascript" src="/Users/paulgettel/Dropbox/data.js"></script>
+ -->
+    <script type="text/javascript" src="flows.js"></script>
+    <script type="text/javascript" src="flowshtml.js"></script>
+
+    <style type="text/css">
+    .rollup {
+        font-weight: bold;
+    }
+
+    .detail {
+        text-decoration: underline;
+    }
+    </style>
+    <style>
+    /* The Modal (background) */
+
+    .modal {
+        display: none;
+        /* Hidden by default */
+        position: fixed;
+        /* Stay in place */
+        z-index: 1;
+        /* Sit on top */
+        padding-top: 100px;
+        /* Location of the box */
+        left: 0;
+        top: 0;
+        //width: 100%;
+        /* Full width */
+        height: 100%;
+        /* Full height */
+        overflow: auto;
+        /* Enable scroll if needed */
+        background-color: rgb(0, 0, 0);
+        /* Fallback color */
+        background-color: rgba(0, 0, 0, 0.4);
+        /* Black w/ opacity */
+    }
+    /* Modal Content */
+
+    .modal-content {
+        position: relative;
+        background-color: #fefefe;
+        margin: auto;
+        padding: 0;
+        border: 1px solid #888;
+        //width: 80%;
+        box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+        -webkit-animation-name: animatetop;
+        -webkit-animation-duration: 0.4s;
+        animation-name: animatetop;
+        animation-duration: 0.4s
+    }
+    /* Add Animation */
+
+    @-webkit-keyframes animatetop {
+        from {
+            top: -300px;
+            opacity: 0
+        }
+        to {
+            top: 0;
+            opacity: 1
+        }
+    }
+
+    @keyframes animatetop {
+        from {
+            top: -300px;
+            opacity: 0
+        }
+        to {
+            top: 0;
+            opacity: 1
+        }
+    }
+    /* The Close Button */
+
+    .close {
+        color: white;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+    }
+
+    .close:hover,
+    .close:focus {
+        color: #000;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .modal-header {
+        padding: 2px 16px;
+        background-color: #5cb85c;
+        color: white;
+    }
+
+    .modal-body {
+        padding: 2px 16px;
+    }
+
+    .modal-footer {
+        padding: 2px 16px;
+        background-color: #5cb85c;
+        color: white;
+    }
+    </style>
+</head>
+
+<body>
+    <div id="flowscontrol"> </div>
+    <table id="flows" cellspacing="0" cellpadding="0" border="0">
+        <tr>
+            <td id="firstTd" class="headerminorleft">
+                <div style="overflow:hidden;">
+                    <table id="leftHeaderData" cellspacing="0" cellpadding="0" border="1">
+                    </table>
+                </div>
+            </td>
+            <td class="headerminorright">
+                <div id="divHeader" style="overflow:hidden;">
+                    <table id="rightHeaderData" cellspacing="0" cellpadding="0" border="1">
+                    </table>
+                </div>
+            </td>
+            <td class="headerminorend">
+                <div id="divHeaderEnd" style="overflow:hidden;">
+                    <table id="endHeaderData" cellspacing="0" cellpadding="0" border="1">
+                    </table>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td valign="top" class="dataminorleft">
+                <div id="firstcol" style="overflow: scroll;height:500px">
+                    <table id="leftData" cellspacing="0" cellpadding="0" border="1">
+                    </table>
+                </div>
+            </td>
+            <td valign="top" class="dataminorright">
+                <div id="table_div" style="overflow: scroll;height:500px;position:relative">
+                    <table id="rightData" cellspacing="0" cellpadding="0" border="1">
+                    </table>
+                </div>
+            </td>
+            <td valign="top" class="dataminorend">
+                <div id="table_div_end" style="overflow: scroll;height:500px;position:relative">
+                    <table id="endData" cellspacing="0" cellpadding="0" border="1">
+                    </table>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td id="footerTd" class="footerminorleft">
+                <div style="overflow:hidden;">
+                    <table id="leftFooterData" cellspacing="0" cellpadding="0" border="1">
+                    </table>
+                </div>
+            </td>
+            <td class="footerminorright">
+                <div id="divFooter" style="overflow:hidden;">
+                    <table id="rightFooterData" cellspacing="0" cellpadding="0" border="1">
+                    </table>
+                </div>
+            </td>
+            <td class="footerminorend">
+                <div id="divFooterEnd" style="overflow:hidden;">
+                    <table id="endFooterData" cellspacing="0" cellpadding="0" border="1">
+                    </table>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td id="footerTotalTd" class="footerminortotalleft">
+                <div style="overflow:hidden;">
+                    <table id="leftFooterTotalData" cellspacing="0" cellpadding="0" border="1">
+                    </table>
+                </div>
+            </td>
+            <td class="footerminortotalright">
+                <div id="divFooterTotal" style="overflow:hidden;">
+                    <table id="rightFooterTotalData" cellspacing="0" cellpadding="0" border="1">
+                    </table>
+                </div>
+            </td>
+            <td class="footerminortotalend">
+                <div id="divFooterTotalEnd" style="overflow:hidden;">
+                    <table id="endFooterTotalData" cellspacing="0" cellpadding="0" border="1">
+                    </table>
+                </div>
+            </td>
+        </tr>
+    </table>
+    <div id="flowsold"> </div>
+
+    <div id="myModal" class="modal">
+        <!-- Modal content -->
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="close">&times;</span>
+                <h2>Modal Header</h2>
+            </div>
+            <div class="modal-body">
+                <p>Some text in the Modal Body</p>
+                <p>Some other text...</p>
+            </div>
+        </div>
+
+
+    </div>
+</body>
+
+</html>
