@@ -168,10 +168,9 @@
 
         for (i = 0; i < parsedRythm.length; i++) {
             let next
-            if (parsedRythm.rythm=="o") {
-                next="99991231"
-            }
-            else {
+            if (parsedRythm.rythm == "o") {
+                next = "99991231"
+            } else {
                 next = moment(current, 'YYYYMMDD').add(1, parsedRythm.rythm).format('YYYYMMDD')
             }
             if (next == current) { // in case moment duration/rythm code is incorrect:moment returns same date
@@ -211,7 +210,7 @@
                     flow.account = normalizedContract && normalizedContract.account
                     flows[current] = flow;
                 }
-                current=rythmNext(parsedRythm, current)
+                current = rythmNext(parsedRythm, current)
             }
         }
         return flows
@@ -263,13 +262,15 @@
     function round(value) {
         return Math.round(value)
     }
+
     function extendObject(obj, src) {
         if (src) {
             obj = obj || {}
-            Object.keys(src).forEach(function(key) { if (obj[key]===undefined) obj[key] = src[key]; });
+            Object.keys(src).forEach(function(key) { if (obj[key] === undefined) obj[key] = src[key]; });
         }
         return obj;
     }
+
     function mergeFlow(oldFlow, flow, unit) {
         let merged = {}
         merged.unit = unit || oldFlow.unit || flow && flow.unit
@@ -305,25 +306,25 @@
         if (flow && flow.in) {
             let inamount = convert(flow.in, flow.unit, merged.unit)
             merged.in += inamount
-            merged.in = round2(merged.in) 
+            merged.in = round2(merged.in)
         }
 
         if (flow && flow.out) {
             let out = convert(flow.out, flow.unit, merged.unit)
             merged.out += out
-            merged.out = round2(merged.out ) 
+            merged.out = round2(merged.out)
         }
 
         if (flow && flow.amount) {
             let amount = convert(flow.amount, flow.unit, merged.unit)
             merged.amount += amount
-            merged.amount = round2(merged.amount ) 
+            merged.amount = round2(merged.amount)
             if (amount > 0 && typeof flow.in === "undefined") {
                 merged.in += amount
-                merged.in = round2(merged.in ) 
+                merged.in = round2(merged.in)
             } else if (typeof flow.out === "undefined") {
                 merged.out += amount
-                merged.out = round2(merged.out )
+                merged.out = round2(merged.out)
             }
         }
 
@@ -355,11 +356,11 @@
                 balance += flow.amount
             flow.balance = balance
             if (balances[day] !== undefined) {
-                let oldBalance = { balance:flow.balance , }
+                let oldBalance = { balance: flow.balance, }
                 flow.balance = balances[day]
                 balance = balances[day]
 
-                oldBalance.deltaBalance= flow.balance - oldBalance.balance
+                oldBalance.deltaBalance = flow.balance - oldBalance.balance
                 flow.oldBalance = flow.oldBalance || {}
                 flow.oldBalance[day] = oldBalance
             }
@@ -552,7 +553,7 @@
     // deep copy of undefined attributes
     function inherit(source, parent, prototype, deep, target) {
         // filter parent 
-         target = target || {}
+        target = target || {}
 
         // copy source props
         //   if prop in prototype: deep copy/clone 
@@ -594,8 +595,8 @@
         if (!destination)
             if (Array.isArray(source))
                 destination = []
-            else
-                destination = {}
+        else
+            destination = {}
         for (var property in source) {
             if (typeof source[property] === "object" && deep) {
                 if (Array.isArray(source[property]))
@@ -795,14 +796,15 @@
     }
 
     function showRow($tr, show) {
-        let row=$('td', $tr).first().data("rownumber")
-        $trs = $('tr[data-rownumber='+row+"]")
+        let row = $('td', $tr).first().data("rownumber")
+        $trs = $('tr[data-rownumber=' + row + "]")
         if (show)
             $trs.show()
         else
-           $trs.hide()
+            $trs.hide()
 
     }
+
     function addExpandHandler($tr, handler, symbol) {
         $('td', $tr).first().on("click", handler).text(symbol)
     }
@@ -820,70 +822,76 @@
         mergedFlow.average = round(mergedFlow.amount / count)
         return mergedFlow
     }
+
     function prettyContract(contract) {
-        return ""+ contract.amount +", rythm: "+ contract.rythm +(contract.unit?", unit: "+ contract.unit :"")
+        return "" + contract.amount + ", rythm: " + contract.rythm + (contract.unit ? ", unit: " + contract.unit : "")
     }
 
     function prettyOldBalance(balance) {
-        return " balance: "+balance.balance+", delta: "+ balance.deltaBalance
+        return " balance: " + balance.balance + ", delta: " + balance.deltaBalance
     }
     //   name
     //.     date,amount,unit,balance
     // gather contracts and indexes and flows before day until last oldbalance or begin
     function getReconcileInfos(allFlows, wind, day, previousBalanceDate, accountName) {
         let title = ""
-        title += " "+day+" "+prettyOldBalance(wind.oldBalance[day])
-        let sorted = _(allFlows.contracts).reduce((indexes, contract,index)=>{
-             console.log(indexes,contract,index);
-              if (isContract(contract) && contract.account==accountName) 
-                indexes.push(index); 
-             return indexes
-         }
-         , [])
-        .reduce((list,index)=>{ 
-            let totalFlow = getSpecFlows(day, allFlows.allFlows[index], previousBalanceDate)
-            if (totalFlow)
-                list.push({index:index, totalFlow: totalFlow})
-            return list 
-            },[])
-        
+        title += " " + day + " " + prettyOldBalance(wind.oldBalance[day])
+
+        let sorted = _(allFlows.contracts).reduce((indexes, contract, index) => {
+                console.log(indexes, contract, index);
+                if (isContract(contract) && contract.account == accountName)
+                    indexes.push(index);
+                return indexes
+            }, [])
+            .reduce((list, index) => {
+                let totalFlow = getSpecFlows(day, allFlows.allFlows[index], previousBalanceDate)
+                if (totalFlow)
+                    list.push({ index: index, totalFlow: totalFlow })
+                return list
+            }, [])
+
 
         sorted = _(sorted)
-        .orderBy(["totalFlow"],["asc"])
+            .orderBy(["totalFlow"], ["asc"])
         sorted = sorted
-        .reduce((text,list)=>{ 
-            if (list.index) {
-                let index = list.index
-                text += "\n"; 
-                text += "  "+list.totalFlow; 
-                text += " : "+allFlows.paths[index]; 
-                text += ": "+prettyContract(allFlows.contracts[index]); 
-            }
-            return text 
-            },"")
+            .reduce((text, list) => {
+                if (list.index) {
+                    let index = list.index
+                    text += "\n";
+                    text += "  " + list.totalFlow;
+                    text += " : " + allFlows.paths[index];
+                    text += ": " + prettyContract(allFlows.contracts[index]);
+                }
+                return text
+            }, "")
 
-            title += " "+ sorted
+        let content = " " + sorted
 
-         return title   
+        return { title:title, content:content, }
     }
+
     function prettyFlow(flow) {
-        return " amount: "+flow.amount+(flow.unit?", unit: "+flow.unit:"")+(flow.balance?", balance: "+flow.balance :"")
+        return " amount: " + flow.amount + (flow.unit ? ", unit: " + flow.unit : "") + (flow.balance ? ", balance: " + flow.balance : "")
     }
-    function getSpecFlows(day, flows,  previousBalanceDate){
-        let totalFlow = _(flows).reduce((totalFlow,flow, flowDate)=>{
-            if (flowDate<day && (!previousBalanceDate || previousBalanceDate<flowDate)) {
+
+    function getSpecFlows(day, flows, previousBalanceDate) {
+        let totalFlow = _(flows).reduce((totalFlow, flow, flowDate) => {
+            if (flowDate < day && (!previousBalanceDate || previousBalanceDate < flowDate)) {
                 totalFlow += flow.amount
             }
-            return totalFlow 
+            return totalFlow
         }, 0)
         return totalFlow;
     }
+
     function getPreviousBalanceDate(account, firstBalance) {
-        return _(account.balances).reduce((max,bal,day)=>{ if(day<firstBalance && (!max || day>max)) max=day; return max},"")
+        return _(account.balances).reduce((max, bal, day) => { if (day < firstBalance && (!max || day > max)) max = day; return max }, "")
     }
+
     function prettyNegatives(negatives) {
         return JSON.stringify(negatives, null, 2)
     }
+
     function refreshWindows() {
 
         let allFlows = genAllContractLines(normalisedContracts, start, end, windowSize)
@@ -951,7 +959,7 @@
             $table.css("border", "1px solid #000");
             let $header = $('<tr>').appendTo(
                 $table
-//                .appendTo($('#flowsold'))
+                //                .appendTo($('#flowsold'))
             )
 
             $header
@@ -1006,7 +1014,7 @@
             $header1.appendTo($('#leftHeaderData'))
             $header2.appendTo($('#rightHeaderData'))
             $header3.appendTo($('#endHeaderData'))
-           return $table
+            return $table
         }
 
         function appendRow($appendPoint, targetContract, windowedFlows, total, contractName, level, path, cssClass, show, aggregateCount, hasChildren, hasDetail) {
@@ -1024,8 +1032,8 @@
 
             let factor = 30
             let offset = 130
-            let cssColor =  "rgb(" + (offset + level * factor) + "," + (offset + level * factor) + "," + (offset + level * factor) + ")"
-           $tr.css("background-color",cssColor)
+            let cssColor = "rgb(" + (offset + level * factor) + "," + (offset + level * factor) + "," + (offset + level * factor) + ")"
+            $tr.css("background-color", cssColor)
 
             let symbol = "+"
             if (cssClass == 'detail') {
@@ -1081,13 +1089,13 @@
                 if (value == null) {
                     let $td;
                     let contractvalue = targetContract[prop]
-                    let flow1=_.chain(windowedFlows).values().head().value()
-                    if (flow1 && flow1[prop]!== undefined && (prop=="account" || prop=="unit")) {
-                        contractvalue= flow1[prop]
+                    let flow1 = _.chain(windowedFlows).values().head().value()
+                    if (flow1 && flow1[prop] !== undefined && (prop == "account" || prop == "unit")) {
+                        contractvalue = flow1[prop]
                     }
                     if (Array.isArray(contractvalue)) {
-                        if (contractvalue.length>1) 
-                            contractvalue = contractvalue[0]+",..."
+                        if (contractvalue.length > 1)
+                            contractvalue = contractvalue[0] + ",..."
                     }
                     $tr.append($td = $('<td>').text(contractvalue)
                         .css("border", "1px solid #000")
@@ -1103,12 +1111,12 @@
                 if (value == null) {
                     let $td;
                     let contractvalue = targetContract[prop]
-                    let flow1=_.chain(windowedFlows).values().head().value()
-                    if (flow1 && flow1[prop]!== undefined && (prop=="account" || prop=="unit")) {
-                        contractvalue= flow1[prop]
+                    let flow1 = _.chain(windowedFlows).values().head().value()
+                    if (flow1 && flow1[prop] !== undefined && (prop == "account" || prop == "unit")) {
+                        contractvalue = flow1[prop]
                     }
                     if (Array.isArray(contractvalue)) {
-                        if (contractvalue.length>1) 
+                        if (contractvalue.length > 1)
                             contractvalue = contractvalue.join("<br/>")
                     }
                     $leftRow.append($td = $('<td>').html(contractvalue)
@@ -1238,7 +1246,7 @@
             if (show)
                 $tr.show();
             else
-               $tr.hide();
+                $tr.hide();
 
             //show = true 
 
@@ -1246,20 +1254,25 @@
                 $leftRow.show();
             else
                 $leftRow.hide();
-            $leftRow.appendTo($('#leftData')).css("background-color",cssColor)
+            $leftRow.appendTo($('#leftData')).css("background-color", cssColor)
 
             if (show)
                 $rightRow.show();
             else
                 $rightRow.hide();
-            $rightRow.appendTo($('#rightData')).css("background-color",cssColor)
+            $rightRow.appendTo($('#rightData')).css("background-color", cssColor)
 
             if (show)
                 $endRow.show();
             else
                 $endRow.hide();
-            $endRow.appendTo($('#endData')).css("background-color",cssColor)
+            $endRow.appendTo($('#endData')).css("background-color", cssColor)
 
+        }
+
+        function textToHtml(text) {
+            text = text.replace(/\n/g, "<br/>")
+            return text
         }
 
         function appendFooter($appendPoint, targetContract, windowedFlows, total, contractName, isTotalLine, allFlows) {
@@ -1276,8 +1289,7 @@
                 $footer1.css("background-color", "white")
                 $footer2.css("background-color", "white")
                 $footer3.css("background-color", "white")
-            }
-            else {
+            } else {
                 $tr.css("background-color", "yellow")
                 $footer1.css("background-color", "yellow")
                 $footer2.css("background-color", "yellow")
@@ -1357,14 +1369,15 @@
                     // pop up with flows details: contracts/flows since last oldbalance: amount,unit,date,balance
                     let firstBalance = _(wind.oldBalance).keys().head()
                     if (!isTotalLine) {
-                        $bal.attr("title", getReconcileInfos(allFlows, wind, firstBalance, getPreviousBalanceDate(targetContract, firstBalance), contractName))
+                        let text = getReconcileInfos(allFlows, wind, firstBalance, getPreviousBalanceDate(targetContract, firstBalance), contractName)
+                        $bal.attr("title", text.title+"\n "+text.content)
+                        $bal.on("click", openmodel(text.title, textToHtml(text.content)))
                     }
                     if (firstBalance) {
-                        if (Math.abs(wind.oldBalance[firstBalance].deltaBalance)>Math.abs(deltaBalanceThreshold)) {
-                            if (wind.oldBalance[firstBalance].deltaBalance>0) {
+                        if (Math.abs(wind.oldBalance[firstBalance].deltaBalance) > Math.abs(deltaBalanceThreshold)) {
+                            if (wind.oldBalance[firstBalance].deltaBalance > 0) {
                                 $bal.css("color", "green")
-                            }
-                            else {
+                            } else {
                                 $bal.css("color", "red")
                             }
                         }
@@ -1375,7 +1388,8 @@
                     $bal.css("color", "orange")
                     $bal.css("font-weight", "bold")
                     // list 
-                    $bal.attr("title",prettyNegatives(wind.negative))
+                    $bal.attr("title", prettyNegatives(wind.negative))
+                    $bal.on("click", openmodel("", textToHtml(prettyNegatives(wind.negative))))
                 }
             })
 
@@ -1442,14 +1456,13 @@
             })
 
             if (isTotalLine) {
-               $footer1.appendTo($('#leftFooterTotalData'))
-               $footer2.appendTo($('#rightFooterTotalData'))
-               $footer3.appendTo($('#endFooterTotalData'))
-            }
-            else {
-               $footer1.appendTo($('#leftFooterData'))
-               $footer2.appendTo($('#rightFooterData'))
-               $footer3.appendTo($('#endFooterData'))
+                $footer1.appendTo($('#leftFooterTotalData'))
+                $footer2.appendTo($('#rightFooterTotalData'))
+                $footer3.appendTo($('#endFooterTotalData'))
+            } else {
+                $footer1.appendTo($('#leftFooterData'))
+                $footer2.appendTo($('#rightFooterData'))
+                $footer3.appendTo($('#endFooterData'))
 
             }
         }
@@ -1475,13 +1488,13 @@
         }
 
         function doTableSizing($anchor) {
-            let alltds = []; 
+            let alltds = [];
             let $rowsleft = $('.headerminorleft tr,.dataminorleft tr,.footerminorleft tr,.footerminortotalleft tr', $anchor);
             let $rowsright = $('.headerminorright tr,.dataminorright tr,.footerminorright tr,.footerminortotalright tr', $anchor);
             let $rowsend = $('.headerminorend tr,.dataminorend tr,.footerminorend tr,.footerminortotalend tr', $anchor);
             let col, row, max = 0;
             let numrows = $rowsleft.length;
-            if ($rowsleft.length!=$rowsright.length || $rowsleft.length!=$rowsend.length)
+            if ($rowsleft.length != $rowsright.length || $rowsleft.length != $rowsend.length)
                 throw "unequal rows "
             for (row = 0; row < numrows; row++) {
                 let max = 0;
@@ -1500,12 +1513,12 @@
             }
             let numcols = alltds.length / numrows;
             for (max = 0, col = 0; col < numcols; col++) {
-                if (col==numcols-1)
+                if (col == numcols - 1)
                     console.log("here")
                 for (max = 0, row = 0; row < numrows; row++) {
                     let index = col + row * numcols;
                     max = Math.max($(alltds[index]).width(), max);
-                    if (max>300)
+                    if (max > 300)
                         console.log("there")
                 }
                 for (row = 0; row < numrows; row++) {
@@ -1531,16 +1544,20 @@
         function fnScrollh() {
             $('.dataminorright>div,.footerminorright>div,.footerminortotalright>div', $anchor).scrollLeft($('.headerminorright>div', $anchor).scrollLeft());
         };
+
         function fnScrollhf() {
             $('.dataminorright>div,.headerminorright>div,.footerminortotalright>div', $anchor).scrollLeft($('.footerminorright>div', $anchor).scrollLeft());
             $('.footerminorend>div,.footerminorleft>div').scrollTop($('.footerminorright>div', $anchor).scrollTop());
         };
+
         function fnScrolllf() {
             $('.footerminorend>div,.footerminorright>div').scrollTop($('.footerminorleft>div', $anchor).scrollTop());
         };
+
         function fnScrolllfe() {
             $('.footerminorleft>div,.footerminorright>div').scrollTop($('.footerminorend>div', $anchor).scrollTop());
         };
+
         function fnScrollht() {
             $('.dataminorright>div,.footerminorright>div,.headerminorright>div', $anchor).scrollLeft($('.footerminortotalright>div', $anchor).scrollLeft());
         };
@@ -1560,25 +1577,25 @@
 
         $('.dataminorleft>div,.dataminorright>div', $anchor)
             .css('overflow', 'scroll')
-            .css('position', 'relative'); 
+            .css('position', 'relative');
         $('.headerminorleft>div,.headerminorright>div,.footerminorleft>div,.footerminorright>div,.footerminortotalright>div,.footerminorend>div', $anchor)
             .css('overflow', 'scroll')
-            .css('position', 'relative'); 
+            .css('position', 'relative');
 
         doTableSizing($anchor);
 
         function setMaxSize() {
-            let offset = $('.dataminorleft>div').offset().left + $('.dataminorleft>div').width()+ $('.dataminorend>div').width();
+            let offset = $('.dataminorleft>div').offset().left + $('.dataminorleft>div').width() + $('.dataminorend>div').width();
             let wwidth = $(window).width();
             let leftover = wwidth - offset * 1.05;
             $('.headerminorright>div,.dataminorright>div,.footerminorright>div,.footerminorright>div,.footerminortotalright>div', $anchor).css('max-width', leftover);
 
-            offset = $('.headerminorleft>div').offset().top + $('.headerminorleft>div').height()+ $('.footerminortotalleft>div').height();
+            offset = $('.headerminorleft>div').offset().top + $('.headerminorleft>div').height() + $('.footerminortotalleft>div').height();
             let wheight = $(window).height();
             leftover = wheight - offset * 1.05;
-            let sharefraction =0.75
+            let sharefraction = 0.75
             let share = leftover * sharefraction
-            let accountshare = leftover * (1.0-sharefraction)
+            let accountshare = leftover * (1.0 - sharefraction)
             $('.dataminorleft>div,.dataminorright>div,.dataminorend>div', $anchor).css('max-height', share).css('height', share);
             $('.footerminorleft>div,.footerminorright>div,.footerminorend>div', $anchor).css('max-height', accountshare).css('height', accountshare);
         };
@@ -1609,6 +1626,42 @@
         }
 
     };
+
+    var openmodel;
+    var span ;
+    openmodel = function(title, content) {
+
+//    window.open('http://stackoverflow.com','mywindow','width=400,height=200,toolbar=yes,location=yes,directories=yes,status=yes,menubar=yes,scrollbars=yes,copyhistory=yes, resizable=yes')
+
+
+        return ()=> {
+            // let output = "hiiiii ";
+            // let OpenWindow = window.open("/flows2/popup.html", "mywin", '');
+            // OpenWindow.dataFromParent = output; // dataFromParent is a variable in child.html
+            // OpenWindow.init();
+
+            // return 
+
+            $modal = $('#myModal');
+            if (!span) {
+                span = $('#myModal .close').get(0);
+                span.onclick = function() {
+                    $modal.get(0).style.display = "none";
+                }
+
+                // When the user clicks anywhere outside of the modal, close it
+                window.onclick = function(event) {
+                    if (event.target == $modal.get(0)) {
+                        $modal.get(0).style.display = "none";
+                    }
+                }
+            }            
+            $modal.get(0).style.display = "block";
+            $('.modal-header h2', $modal).html(title)
+            $('.modal-body', $modal).html(content)
+        }
+    }
+
     </script>
     <style type="text/css">
     .rollup {
@@ -1619,11 +1672,105 @@
         text-decoration: underline;
     }
     </style>
+    <style>
+    /* The Modal (background) */
+
+    .modal {
+        display: none;
+        /* Hidden by default */
+        position: fixed;
+        /* Stay in place */
+        z-index: 1;
+        /* Sit on top */
+        padding-top: 100px;
+        /* Location of the box */
+        left: 0;
+        top: 0;
+        //width: 100%;
+        /* Full width */
+        height: 100%;
+        /* Full height */
+        overflow: auto;
+        /* Enable scroll if needed */
+        background-color: rgb(0, 0, 0);
+        /* Fallback color */
+        background-color: rgba(0, 0, 0, 0.4);
+        /* Black w/ opacity */
+    }
+    /* Modal Content */
+
+    .modal-content {
+        position: relative;
+        background-color: #fefefe;
+        margin: auto;
+        padding: 0;
+        border: 1px solid #888;
+        //width: 80%;
+        box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+        -webkit-animation-name: animatetop;
+        -webkit-animation-duration: 0.4s;
+        animation-name: animatetop;
+        animation-duration: 0.4s
+    }
+    /* Add Animation */
+
+    @-webkit-keyframes animatetop {
+        from {
+            top: -300px;
+            opacity: 0
+        }
+        to {
+            top: 0;
+            opacity: 1
+        }
+    }
+
+    @keyframes animatetop {
+        from {
+            top: -300px;
+            opacity: 0
+        }
+        to {
+            top: 0;
+            opacity: 1
+        }
+    }
+    /* The Close Button */
+
+    .close {
+        color: white;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+    }
+
+    .close:hover,
+    .close:focus {
+        color: #000;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .modal-header {
+        padding: 2px 16px;
+        background-color: #5cb85c;
+        color: white;
+    }
+
+    .modal-body {
+        padding: 2px 16px;
+    }
+
+    .modal-footer {
+        padding: 2px 16px;
+        background-color: #5cb85c;
+        color: white;
+    }
+    </style>
 </head>
 
 <body>
     <div id="flowscontrol"> </div>
-
     <table id="flows" cellspacing="0" cellpadding="0" border="0">
         <tr>
             <td id="firstTd" class="headerminorleft">
@@ -1648,13 +1795,13 @@
         <tr>
             <td valign="top" class="dataminorleft">
                 <div id="firstcol" style="overflow: scroll;height:500px">
-                    <table id="leftData"  cellspacing="0" cellpadding="0" border="1">
+                    <table id="leftData" cellspacing="0" cellpadding="0" border="1">
                     </table>
                 </div>
             </td>
             <td valign="top" class="dataminorright">
                 <div id="table_div" style="overflow: scroll;height:500px;position:relative">
-                    <table id="rightData"  cellspacing="0" cellpadding="0" border="1">
+                    <table id="rightData" cellspacing="0" cellpadding="0" border="1">
                     </table>
                 </div>
             </td>
@@ -1707,6 +1854,22 @@
         </tr>
     </table>
     <div id="flowsold"> </div>
+
+    <div id="myModal" class="modal">
+        <!-- Modal content -->
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="close">&times;</span>
+                <h2>Modal Header</h2>
+            </div>
+            <div class="modal-body">
+                <p>Some text in the Modal Body</p>
+                <p>Some other text...</p>
+            </div>
+        </div>
+
+
+    </div>
 </body>
 
 </html>
