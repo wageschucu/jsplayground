@@ -1,0 +1,2 @@
+3r1vdoe5	{"parseTreeString":"(ROOT\n  (S\n    (NP (PRP$ My) (NN dog))\n    (ADVP (RB also))\n    (VP (VBZ likes)\n      (S\n        (VP (VBG eating)\n          (NP (NN sausage)))))\n    (. .)))"}
+3dle07jv	{"sentence":"the cat is black2.","parseTreeString":"(ROOT\n  (S\n    (NP (DT the) (NN cat))\n    (VP (VBZ is)\n      (ADJP (JJ black2)))\n    (. .)))"}

@@ -1,0 +1,66 @@
+{
+    "sents": [
+        [
+        {
+            "i": 0,
+            "l": 3,
+            "v": "the",
+            "p": false,
+            "pos": "Article",
+            "morpho":
+            {
+                "nf": "the",
+                "pos": "Article",
+                "ma": "Indefinite"
+            }
+        },
+        {
+            "i": 4,
+            "l": 3,
+            "v": "pig",
+            "p": false,
+            "pos": "Noun",
+            "morpho":
+            {
+                "nf": "pig",
+                "pos": "Noun",
+                "ma": "Common"
+            }
+        },
+        {
+            "i": 8,
+            "l": 2,
+            "v": "is",
+            "p": false,
+            "pos": "Verb",
+            "morpho":
+            {
+                "nf": "be",
+                "pos": "Verb",
+                "ma": "-"
+            }
+        },
+        {
+            "i": 11,
+            "l": 5,
+            "v": "black",
+            "p": false,
+            "pos": "Adjective",
+            "morpho":
+            {
+                "nf": "black",
+                "pos": "Adjective",
+                "ma": "-"
+            }
+        },
+        {
+            "i": 16,
+            "l": 1,
+            "v": ".",
+            "p": true,
+            "pos": "Punctuation",
+            "morpho": null
+        }]
+    ],
+    "err": null
+}

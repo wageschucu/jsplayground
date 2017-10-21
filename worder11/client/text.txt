@@ -1,0 +1,45 @@
+node = getTextBetween(text, "(", ")");
+head:[^\s\(\)] 
+  greedy
+head\s+\(.+\)|head\s+[^\s\(\)]
+
+// node is either text or not 
+
+http://nlp.stanford.edu:8080/parser/index.jsp
+
+Most men, even in this comparatively free country, through mere ignorance and mistake, are so occupied with the factitious cares and superfluously coarse labors of life that its finer fruits cannot be plucked by them. 
+
+(ROOT
+  (S
+    (NP (JJS Most) (NNS men))
+    (, ,)
+    (ADVP (RB even)
+      (PP (IN in)
+        (NP (DT this)
+          (ADJP (RB comparatively) (JJ free))
+          (NN country))))
+    (, ,)
+    (PP (IN through)
+      (NP (JJ mere) (NN ignorance)
+        (CC and)
+        (NN mistake)))
+    (, ,)
+    (VP (VBP are)
+      (ADJP (RB so) (VBN occupied)
+        (PP (IN with)
+          (NP
+            (NP (DT the) (JJ factitious) (NN cares))
+            (CC and)
+            (NP
+              (NP (JJ superfluously) (JJ coarse) (NNS labors))
+              (PP (IN of)
+                (NP (NN life))))))
+        (SBAR (IN that)
+          (S
+            (NP (PRP$ its) (NN finer) (NNS fruits))
+            (VP (MD can) (RB not)
+              (VP (VB be)
+                (VP (VBN plucked)
+                  (PP (IN by)
+                    (NP (PRP them))))))))))
+    (. .)))
