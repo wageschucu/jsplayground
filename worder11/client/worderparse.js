@@ -279,7 +279,7 @@ var affixRuleMatcherFactory = function(affixRules) {
 				var oldStem = stemNode.children[0].head;
 
 				if ( (matches=matchHead(stemNode, affixRule.matchExp)) && (token=affixRule.regexp.exec(oldStem)) && token.length 
-					&& ! (stemNode && _.contains(stemNode.rules ,  affixRule) )  // not twice
+					&& ! (stemNode && stemNode.rules.indexOf(  affixRule)!=-1 )  // not twice
 				) {
 
 					status.matches = { matches:matches, token:token, oldStem: oldStem, oldStemHead:oldStemHead };

@@ -12,23 +12,35 @@ function process(text) {
     // /Applications/Google\ Chrome\ Canary.app/Contents/MacOS/Google\ Chrome\ Canary --disable-web-security --user-data-dir /Users/paulgettel/code/jsplayground/worder11/client/worder11.html
     //  but point to canary
     //this works 
-    let sents 
-        $.get("http://pos-en.apphb.com/RESTProcessHandler.ashx?text="+text, (data) => {
-        	console.log(data)
-		    sents = data.sents
-		    let stringTree ="(ROOT (S "
-		    _(sents).forEach(sentence=>_(sentence).forEach(word=>{
-		    	stringTree += "( "+word.pos+(word.morpho&&word.morpho.ma?"-"+word.morpho.ma:"")+" "+word.v+") "  
-		    }))
-		    stringTree += ") )"
-			let tree = StnfParse.getNodesFromStnfStringTrim(stringTree)
-		    transformWords(tree)
-        })
+let tree = StnfParse.getNodesFromStnfStringTrim(newText)
+
+transformWords(tree)
+   //  newText
+   //  let sents 
+   //      $.get("http://pos-en.apphb.com/RESTProcessHandler.ashx?text="+text, (data) => {
+   //      	console.log(data)
+		 //    sents = data.sents
+		 //    let stringTree ="(ROOT (S "
+		 //    _(sents).forEach(sentence=>_(sentence).forEach(word=>{
+		 //    	stringTree += "( "+word.pos+addAm(word)+addNf(word)+" "+word.v+") "  
+		 //    }))
+		 //    stringTree += ") )"
+			// let tree = StnfParse.getNodesFromStnfStringTrim(stringTree)
+		 //    transformWords(tree)
+   //      })
 
 
     // let tree = StnfParse.getNodesFromStnfStringTrim(testStandfordTreeLong)
     // transformWords(tree)
 
+}
+$(process)
+function addAm(word) {
+	return (word.morpho&&word.morpho.ma&&word.morpho.ma!="-"?"-"+word.morpho.ma:"")	
+}
+
+function addNf(word) {
+	return (word.morpho&&word.morpho.nf&&word.morpho.nf=="be"?"-"+word.morpho.nf:"")	
 }
 
 function transformWords(tree) {
@@ -41,6 +53,23 @@ function transformWords(tree) {
 
 }
 
+var newText = 
+"(ROOT\n\
+  (S\n\
+    (NP (NNP Never))\n\
+    (VP (VBZ has)\n\
+      (NP\n\
+        (NP (DT the) (NN term))\n\
+        (SBAR\n\
+          (S (`` ``)\n\
+            (S\n\
+              (VP (VBG massaging)\n\
+                (NP (DT the) (NNS media))))\n\
+            ('' '')\n\
+            (VP (VBD seemed)\n\
+              (ADJP (RB so) (JJ accurate)))))))\n\
+    (. .)))\n\
+"
 
 var testStandfordTreeMorph =
     "(ROOT \n" +

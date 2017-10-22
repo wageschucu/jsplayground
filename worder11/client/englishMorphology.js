@@ -22,7 +22,7 @@ EnglishRecategorizations = [
 		,{matchExp: LeafTag, transform: "stem word" } 
 		,{matchExp: /\bVBG\b/, transform: "adj open -?"}
 
-		,{matchExp: /\bVerb-be\b/, transform: "VBN -?"}
+			,{matchExp: /\bVerb-be\b/, transform: "VBN -?"}
 		,{matchExp: /\bVBN\b/, transform: "verb past open -?"}
 
 		,{matchExp: /\bVBP\b/, transform: "verb open head -?"}
@@ -40,11 +40,16 @@ EnglishRecategorizations = [
 		,{matchExp: /\bNP\b/, transform: "nounPhrase -?"}
 		,{matchExp: /\bADJP\b/, transform: "adjPhrase -?"}
 		,{matchExp: /\bJJS\b/, transform: "adj head closed -?"}
+
+			,{matchExp: /\bAdjective\b/, transform: "adj open -?"}
 		,{matchExp: /\bJJ\b/, transform: "adj open -?"}
+
 		,{matchExp: /\bPP\b/, transform: "prepPhrase -?"}
 		,{matchExp: /\bIN\b/, transform: "prep head -?"}
-		,{matchExp: /\bArticle-Indefinite\b/, transform: "DT -?"}
+
+			,{matchExp: /\bArticle-Indefinite\b/, transform: "DT -?"}
 		,{matchExp: /\bDT\b/, transform: "det head -?"}
+
 		,{matchExp: /\bPRP\$/, transform: "det head -?"}
 		,{matchExp: /\bPRP\b/, transform: "noun closed -?"}
 		,{matchExp: /CC/, transform: "conj -?"}
@@ -89,12 +94,17 @@ EnglishRecategorizations = [
 				 		affTrans:"suf closed morph -stem  latin -open", 
 				 		stemTrans : "stem latin open morph adj -verb" }
 	,{ name: "latin-adj-from-noun", prio:1, examples:"civil",
-	 				matchExp: "(adj stem)", affixes:"il", isPrefix:false, 
+	 				matchExp: "(adj stem)", affixes:"il al", isPrefix:false, 
 				 		absTrans:"abstract -stem latin -open", 
 				 		affTrans:"suf closed morph -stem  latin -open", 
 				 		stemTrans : "stem latin open morph noun -adj" }
 	,{ name: "compound-prep", prio:1,
 	 				matchExp: "(prep stem)", affixes:"in", isPrefix:true, 
+				 		absTrans:"abstract -stem", 
+				 		affTrans:"pref morph  -stem", 
+				 		stemTrans : "pref morph " }
+	,{ name: "compound-noun", prio:1,
+	 				matchExp: "(noun stem)", affixes:"inter", isPrefix:true, 
 				 		absTrans:"abstract -stem", 
 				 		affTrans:"pref morph  -stem", 
 				 		stemTrans : "pref morph " }
