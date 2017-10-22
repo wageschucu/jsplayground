@@ -14,6 +14,8 @@ function process(text) {
     //this works 
 let tree = StnfParse.getNodesFromStnfStringTrim(newText)
 
+// load text from file?? oops?
+
 transformWords(tree)
    //  newText
    //  let sents 
