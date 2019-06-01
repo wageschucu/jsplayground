@@ -10,8 +10,8 @@
 	var canvasWidth = canvasHeight;
 	var pointerCenterX=50;
 	var pointerCenterY=50;
-	var len=6;
-	var width=2;
+	var len=4;
+	var width=1;
 	var green = '#00ff00' ;
 	var red = '#Ff0000' ;
 	var blue = '#0000Ff' ;
@@ -33,6 +33,9 @@
 	}
 
 	$('#len').val(len);
+	var $div = $('#canvas_container');
+	var windowWidth = $(window).width()-50;
+	var top = $div.offset().top;
 
 	var paper = new Raphael(document.getElementById('canvas_container'), canvasWidth, canvasHeight);  
 	var pointer;
@@ -62,6 +65,7 @@
 	var lastDrawnAngle=0; 
 
 	var currentDuration=0; 
+	var shiftNow=false;
 
 	var requestCount=0;
 	var requestCompleted=0;
@@ -80,7 +84,14 @@
 		moving();
 	}
 
+	var shiftWaiting=false;
+
 	function moving() {
+
+		if (!shiftWaiting) {
+			shiftWaiting=true;
+			setTimeout( function(){shiftNow=true; shiftWaiting=false; console.log("timeout..")},  500);
+		}
 
 		currentAngle += smallDeltaAngle; 
 
@@ -89,9 +100,6 @@
 			hold();
 		}
 		else {
-			if (((currentAngle % angleSize ) ==0)) {
-				//color = randomColor(); 
-			}
 			requestCount++;
 			requestAnimationFrame(draw);
 			setTimeout( moving,  timeIntervalBetweenSmallAngles);
@@ -214,8 +222,11 @@
 				$('svg path[stroke]').attr('stroke', currentColor)
 			}
 			pointer.rotate(""+deltaAngle, 50,50);
+			if (shiftNow && (currentAngle % 90 == 0 )) {
+				shiftNow=false;
+				//shiftRight(getRandomInt(30)+10);			
+			}
 		}
-
 		//pointer.show();
 
 		lastDrawnAngle= currentAngle ;		
@@ -224,6 +235,17 @@
 		console.log("rotate: mode lastDrawnAngle:" +lastDrawnAngle%360 + "  currentAngle:"+currentAngle%360);
 		requestCompleted++;
 		console.log("requestCount:"+requestCount+" requestCompleted:" +requestCompleted +" requestCompletedNotIgnored: "+requestCompletedNotIgnored)
+	}
+	function shiftRight(offset) {
+		let left = $div.offset().left;
+		left+=offset;
+		if (left>windowWidth)
+			left=0; 
+		console.log("left: "+(left - $(window).scrollLeft()));
+		
+		$div.css({position: "absolute",
+		    top: top, left: left
+			});		
 	}
 
 	$(window).keydown(function(e) {
