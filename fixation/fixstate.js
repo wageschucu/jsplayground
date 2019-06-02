@@ -60,7 +60,7 @@
 	var HOLD=2;
 	var GUESS=3;
 	var SCORE=4;
-	var state =SCORE; 
+	var state = SCORE; 
 	var currentAngle=0;
 	var lastDrawnAngle=0; 
 
@@ -224,7 +224,7 @@
 			pointer.rotate(""+deltaAngle, 50,50);
 			if (shiftNow && (currentAngle % 90 == 0 )) {
 				shiftNow=false;
-				//shiftRight(getRandomInt(30)+10);			
+				shiftRight(getRandomInt(50)+20);			
 			}
 		}
 		//pointer.show();
@@ -237,14 +237,15 @@
 		console.log("requestCount:"+requestCount+" requestCompleted:" +requestCompleted +" requestCompletedNotIgnored: "+requestCompletedNotIgnored)
 	}
 	function shiftRight(offset) {
-		let left = $div.offset().left;
+		let topabs = $div.offset().top  - $(window).scrollTop();
+		let left = $div.offset().left - $(window).scrollLeft();
 		left+=offset;
 		if (left>windowWidth)
 			left=0; 
 		console.log("left: "+(left - $(window).scrollLeft()));
 		
 		$div.css({position: "absolute",
-		    top: top, left: left
+		    top: topabs, left: left
 			});		
 	}
 
